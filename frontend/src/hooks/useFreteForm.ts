@@ -1,3 +1,4 @@
+import { useConfiguracao } from "@/contexts/ConfiguracaoContext";
 import { freteFormSchema, type FreteFormData } from "@/forms/schema";
 import type { RouteInfo } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +12,24 @@ const brl = (n: number | undefined | null) => (typeof n === "number" ? n.toLocal
 
 const toNum = (v: string | number | undefined) => (typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", ".")) || 0);
 
+// Função para mapear configuração do sistema para API
+const mapConfigToAPI = (config: any) => {
+	const tipoCargas = {
+		geral: "carga_geral",
+		neogranel: "neogranel",
+		frigorificada: "carga_frigorificada",
+		perigosa: "carga_perigosa",
+		veiculo: "veiculo",
+	};
+
+	return {
+		tabela: config.tabela,
+		tipoCarga: tipoCargas[config.tipoCarga as keyof typeof tipoCargas] || "carga_geral",
+	};
+};
+
 export const useFreteForm = () => {
+	const { configuracao } = useConfiguracao();
 	const [rotaInfo, setRotaInfo] = useState<RouteInfo | null>(null);
 	const [alerts, setAlerts] = useState<{
 		erro: string | null;
@@ -124,9 +142,10 @@ export const useFreteForm = () => {
 			}
 		}
 
+		const configAPI = mapConfigToAPI(configuracao);
 		const requestBody = {
-			tabela: "A", // Tabela A (Lotação)
-			tipoCarga: "carga_geral", // Carga Geral
+			tabela: configAPI.tabela,
+			tipoCarga: configAPI.tipoCarga,
 			eixos: Number(data.eixos),
 			distancia_km,
 			retorno_vazio_km: toNum(data.retornoKm),

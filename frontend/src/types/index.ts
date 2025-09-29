@@ -48,6 +48,68 @@ export interface FreteCalculationResponse {
 	input: any;
 }
 
+// Tipos para Conciliação
+export interface OrcamentoItem {
+	filial: string;
+	filialNome: string;
+	dataEmissao: string;
+	cfop: string;
+	cidadeOrigem: string;
+	origemUF: string;
+	cidadeDestino: string;
+	destinoUF: string;
+	lote: string;
+	placa: string;
+	transportadora: string;
+	valorFrete: number;
+	pesoLiqCalc: number;
+	pesoBruto: number;
+	tpVeiculo: string;
+	tpFrota: string;
+	qtEixos: number;
+	tipoCarga: string;
+	tabelaFrete: string;
+	distanciaKm?: number;
+	pedagioTotal?: number;
+}
+
+export interface FreteMinANTT {
+	valor: number;
+	detalhamento: {
+		pisoBase: number;
+		retornoVazio: number;
+		pedagio: number;
+		coeficientes: {
+			CCD: number;
+			CC: number;
+		};
+	};
+	parametros: {
+		tabela: string;
+		tipoCarga: string;
+		eixos: number;
+		distanciaKm: number;
+	};
+}
+
+export interface ConciliacaoResult {
+	item: OrcamentoItem;
+	status: "CONFORME" | "DIVERGENTE" | "ERRO_CALCULO";
+	alertas: string[];
+	freteMinimo: FreteMinANTT | null;
+	detalhes?: {
+		valorCobrado: number;
+		valorMinimo: number;
+		diferençaPercentual: number;
+		diferençaValor: number;
+		rotaCalculada?: boolean;
+		distanciaCalculada?: number;
+		observacoes?: string[];
+	};
+}
+
+export type StatusConciliacao = "CONFORME" | "DIVERGENTE" | "ERRO_CALCULO";
+
 export interface FreteFormData {
 	modo: ModoDistancia;
 	eixos: string;

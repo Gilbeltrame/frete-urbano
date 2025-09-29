@@ -1,28 +1,41 @@
+import UlogIcon from "@/components/UlogIcon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Calculator, Clock, DollarSign, Route, Shield, Star, TruckIcon, Users, Zap } from "lucide-react";
+import { useConfiguracao } from "@/contexts/ConfiguracaoContext";
+import { BarChart3, Calculator, Clock, DollarSign, Route, Shield, Star, Users, Zap } from "lucide-react";
 
 export default function HomePage() {
+	const { configuracao } = useConfiguracao();
 	return (
 		<div className='p-6 max-w-6xl mx-auto space-y-8'>
 			{/* Hero Section */}
 			<div className='text-center space-y-4 py-8'>
 				<div className='flex justify-center'>
-					<div className='p-4 bg-primary/10 rounded-2xl'>
-						<TruckIcon className='h-12 w-12 text-primary' />
+					<div className='p-1 bg-primary/10 rounded-2xl'>
+						<UlogIcon className='text-primary' size={80} />
 					</div>
 				</div>
-				<h1 className='text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent'>Calculadora de Frete ANTT</h1>
-				<p className='text-xl text-muted-foreground max-w-2xl mx-auto'>Calcule o frete mínimo oficial conforme a Resolução ANTT 5.867/2020 de forma rápida e precisa</p>
+				<h1 className='text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent'>ULog - Sistema de Frete ANTT</h1>
+				<p className='text-xl text-muted-foreground max-w-2xl mx-auto'>
+					Calcule o frete mínimo oficial conforme a Resolução ANTT 5.867/2020 com a precisão e confiabilidade da ULog
+				</p>
 				<div className='flex justify-center gap-2'>
 					<Badge variant='secondary' className='bg-primary/10 text-primary border-primary/20'>
 						Resolução ANTT 5.867/2020
 					</Badge>
 					<Badge variant='secondary' className='bg-secondary/80 text-secondary-foreground border-secondary'>
-						Tabela A (Lotação)
+						Tabela {configuracao.tabela} ({configuracao.modalidade === "lotacao" ? "Lotação" : "Carga Parcial"})
 					</Badge>
 					<Badge variant='secondary' className='bg-accent/80 text-accent-foreground border-accent'>
-						Carga Geral
+						{configuracao.tipoCarga === "geral"
+							? "Carga Geral"
+							: configuracao.tipoCarga === "neogranel"
+							? "Neogranel"
+							: configuracao.tipoCarga === "frigorificada"
+							? "Carga Frigorificada"
+							: configuracao.tipoCarga === "perigosa"
+							? "Carga Perigosa"
+							: "Transporte de Veículos"}
 					</Badge>
 				</div>
 			</div>
@@ -116,7 +129,7 @@ export default function HomePage() {
 
 			{/* Statistics */}
 			<div className='bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-8'>
-				<h2 className='text-2xl font-bold text-center mb-8'>Por que usar nossa calculadora?</h2>
+				<h2 className='text-2xl font-bold text-center mb-8'>Por que usar o sistema ULog?</h2>
 				<div className='grid md:grid-cols-3 gap-8 text-center'>
 					<div className='space-y-2'>
 						<div className='flex justify-center'>

@@ -92,158 +92,158 @@ export default function CalculadoraPage() {
 			{/* Layout Principal */}
 			<div className='p-6 pt-2'>
 				<form onSubmit={handleSubmit(onSubmit)} className='h-full'>
-					<div className='grid grid-cols-12 gap-6'>
+					<div className='grid grid-cols-1 gap-6'>
 						{/* Painel Esquerdo - Dados de Entrada */}
-						<div className='col-span-7 space-y-4'>
-							{/* Tabs Horizontal Compacto */}
-							<Tabs value={watchedValues.modo} onValueChange={(v) => setValue("modo", v as ModoDistancia)} className='h-full flex flex-col'>
-								<TabsList className='grid grid-cols-2 h-10 mb-4'>
-									<TabsTrigger value='origemdestino' className='flex items-center gap-2 text-sm'>
-										<Route className='h-4 w-4' />
-										Origem/Destino
-									</TabsTrigger>
-									<TabsTrigger value='km' className='flex items-center gap-2 text-sm'>
-										<Ruler className='h-4 w-4' />
-										Distância Manual
-									</TabsTrigger>
-								</TabsList>
-
-								{/* Origem/Destino - Layout Horizontal */}
-								<TabsContent value='origemdestino' className='flex-1 space-y-4'>
-									<div className='grid grid-cols-2 gap-4 h-[50%]'>
-										{/* ORIGEM */}
-										<Card className='p-4 border-primary/20 bg-primary/5'>
-											<div className='space-y-3'>
-												<div className='flex items-center gap-2'>
-													<Navigation className='h-4 w-4 text-primary' />
-													<Label className='text-sm font-semibold text-primary'>Origem</Label>
-												</div>
-												<RadioGroup className='flex items-center gap-4' value={watchedValues.origemMode} onValueChange={(v) => setValue("origemMode", v as LocalMode)}>
-													<div className='flex items-center space-x-2'>
-														<RadioGroupItem value='cep' id='origem-cep' />
-														<Label htmlFor='origem-cep' className='text-xs'>
-															CEP
-														</Label>
-													</div>
-													<div className='flex items-center space-x-2'>
-														<RadioGroupItem value='cidade' id='origem-cidade' />
-														<Label htmlFor='origem-cidade' className='text-xs'>
-															Cidade/UF
-														</Label>
-													</div>
-												</RadioGroup>
-												{watchedValues.origemMode === "cep" ? (
-													<Input placeholder='Ex.: 74000-000' {...register("origemCep")} className='h-10 border-primary/30 focus:border-primary' />
-												) : (
-													<CityCombobox
-														value={watchedValues.origemCidade || ""}
-														onValueChange={(value) => {
-															setValue("origemCidade", value);
-															if (value) form.clearErrors("modo");
-														}}
-														placeholder='Selecione a cidade de origem'
-														className='border-primary/30 focus:border-primary'
-													/>
-												)}
-											</div>
-										</Card>
-
-										{/* DESTINO */}
-										<Card className='p-4 border-accent/40 bg-accent/20'>
-											<div className='space-y-3'>
-												<div className='flex items-center gap-2'>
-													<MapPin className='h-4 w-4 text-accent-foreground' />
-													<Label className='text-sm font-semibold text-accent-foreground'>Destino</Label>
-												</div>
-												<RadioGroup className='flex items-center gap-4' value={watchedValues.destinoMode} onValueChange={(v) => setValue("destinoMode", v as LocalMode)}>
-													<div className='flex items-center space-x-2'>
-														<RadioGroupItem value='cep' id='destino-cep' />
-														<Label htmlFor='destino-cep' className='text-xs'>
-															CEP
-														</Label>
-													</div>
-													<div className='flex items-center space-x-2'>
-														<RadioGroupItem value='cidade' id='destino-cidade' />
-														<Label htmlFor='destino-cidade' className='text-xs'>
-															Cidade/UF
-														</Label>
-													</div>
-												</RadioGroup>
-												{watchedValues.destinoMode === "cep" ? (
-													<Input placeholder='Ex.: 01000-000' {...register("destinoCep")} className='h-10 border-accent/50 focus:border-accent-foreground' />
-												) : (
-													<CityCombobox
-														value={watchedValues.destinoCidade || ""}
-														onValueChange={(value) => {
-															setValue("destinoCidade", value);
-															if (value) form.clearErrors("modo");
-														}}
-														placeholder='Selecione a cidade de destino'
-														className='border-accent/50 focus:border-accent-foreground'
-													/>
-												)}
-											</div>
-										</Card>
-									</div>
-
-									{/* Cálculo Automático */}
-									<Card className='bg-gradient-to-r from-secondary/30 to-secondary/50 border-secondary p-4'>
-										<div className='flex items-center justify-between'>
-											<div className='flex items-center gap-3'>
-												<div className='p-2 bg-secondary rounded-lg'>
-													<Zap className='h-4 w-4 text-secondary-foreground' />
-												</div>
-												<div>
-													<h3 className='font-semibold text-secondary-foreground text-sm'>Cálculo Automático</h3>
-													<p className='text-xs text-secondary-foreground/80'>OpenRouteService</p>
-												</div>
-											</div>
-											<Button type='button' onClick={handleCalculateRoute} disabled={isCalculatingRoute} size='sm'>
-												{isCalculatingRoute ? (
-													<>
-														<Loader2 className='mr-2 h-4 w-4 animate-spin' />
-														Calculando...
-													</>
-												) : (
-													<>
-														<Route className='mr-2 h-4 w-4' />
-														Calcular Rota
-													</>
-												)}
-											</Button>
-										</div>
-									</Card>
-								</TabsContent>
-
-								{/* Distância Manual */}
-								<TabsContent value='km' className='flex-1'>
-									<Card className='p-4 h-full flex items-center justify-center border-muted bg-muted/20'>
-										<div className='space-y-6 w-full max-w-md'>
-											<div className='text-center space-y-2'>
-												<Ruler className='h-8 w-8 text-primary mx-auto mb-3' />
-												<div className='space-y-1'>
-													<Label className='text-lg font-semibold text-primary block'>Distância Total</Label>
-													<p className='text-sm text-muted-foreground leading-relaxed'>Digite a quilometragem da viagem</p>
-												</div>
-											</div>
-											<Input
-												type='number'
-												min={0}
-												step='0.1'
-												placeholder='Ex.: 850'
-												{...register("kmTotal")}
-												className='text-center text-lg font-semibold h-12 border-primary/30 focus:border-primary'
-												aria-label='Distância total em quilômetros'
-											/>
-										</div>
-									</Card>
-								</TabsContent>
-							</Tabs>
-						</div>
 
 						{/* Painel Direito - Configurações e Resultado */}
-						<div className='col-span-5 space-y-4'>
+						<div className='space-y-4'>
 							{/* Informações da Rota */}
+							<div className=' space-y-4'>
+								{/* Tabs Horizontal Compacto */}
+								<Tabs value={watchedValues.modo} onValueChange={(v) => setValue("modo", v as ModoDistancia)} className='h-full flex flex-col'>
+									<TabsList className='grid grid-cols-2 h-10 mb-4'>
+										<TabsTrigger value='origemdestino' className='flex items-center gap-2 text-sm'>
+											<Route className='h-4 w-4' />
+											Origem/Destino
+										</TabsTrigger>
+										<TabsTrigger value='km' className='flex items-center gap-2 text-sm'>
+											<Ruler className='h-4 w-4' />
+											Distância Manual
+										</TabsTrigger>
+									</TabsList>
+
+									{/* Origem/Destino - Layout Horizontal */}
+									<TabsContent value='origemdestino' className='flex-1 space-y-4'>
+										<div className='grid grid-cols-2 gap-4 h-[50%]'>
+											{/* ORIGEM */}
+											<Card className='p-4 border-primary/20 bg-primary/5'>
+												<div className='space-y-3'>
+													<div className='flex items-center gap-2'>
+														<Navigation className='h-4 w-4 text-primary' />
+														<Label className='text-sm font-semibold text-primary'>Origem</Label>
+													</div>
+													<RadioGroup className='flex items-center gap-4' value={watchedValues.origemMode} onValueChange={(v) => setValue("origemMode", v as LocalMode)}>
+														<div className='flex items-center space-x-2'>
+															<RadioGroupItem value='cep' id='origem-cep' />
+															<Label htmlFor='origem-cep' className='text-xs'>
+																CEP
+															</Label>
+														</div>
+														<div className='flex items-center space-x-2'>
+															<RadioGroupItem value='cidade' id='origem-cidade' />
+															<Label htmlFor='origem-cidade' className='text-xs'>
+																Cidade/UF
+															</Label>
+														</div>
+													</RadioGroup>
+													{watchedValues.origemMode === "cep" ? (
+														<Input placeholder='Ex.: 74000-000' {...register("origemCep")} className='h-10 border-primary/30 focus:border-primary' />
+													) : (
+														<CityCombobox
+															value={watchedValues.origemCidade || ""}
+															onValueChange={(value) => {
+																setValue("origemCidade", value);
+																if (value) form.clearErrors("modo");
+															}}
+															placeholder='Selecione a cidade de origem'
+															className='border-primary/30 focus:border-primary'
+														/>
+													)}
+												</div>
+											</Card>
+
+											{/* DESTINO */}
+											<Card className='p-4 border-accent/40 bg-accent/20'>
+												<div className='space-y-3'>
+													<div className='flex items-center gap-2'>
+														<MapPin className='h-4 w-4 text-accent-foreground' />
+														<Label className='text-sm font-semibold text-accent-foreground'>Destino</Label>
+													</div>
+													<RadioGroup className='flex items-center gap-4' value={watchedValues.destinoMode} onValueChange={(v) => setValue("destinoMode", v as LocalMode)}>
+														<div className='flex items-center space-x-2'>
+															<RadioGroupItem value='cep' id='destino-cep' />
+															<Label htmlFor='destino-cep' className='text-xs'>
+																CEP
+															</Label>
+														</div>
+														<div className='flex items-center space-x-2'>
+															<RadioGroupItem value='cidade' id='destino-cidade' />
+															<Label htmlFor='destino-cidade' className='text-xs'>
+																Cidade/UF
+															</Label>
+														</div>
+													</RadioGroup>
+													{watchedValues.destinoMode === "cep" ? (
+														<Input placeholder='Ex.: 01000-000' {...register("destinoCep")} className='h-10 border-accent/50 focus:border-accent-foreground' />
+													) : (
+														<CityCombobox
+															value={watchedValues.destinoCidade || ""}
+															onValueChange={(value) => {
+																setValue("destinoCidade", value);
+																if (value) form.clearErrors("modo");
+															}}
+															placeholder='Selecione a cidade de destino'
+															className='border-accent/50 focus:border-accent-foreground'
+														/>
+													)}
+												</div>
+											</Card>
+										</div>
+
+										{/* Cálculo Automático */}
+										<Card className='bg-gradient-to-r from-secondary/30 to-secondary/50 border-secondary p-4'>
+											<div className='flex items-center justify-between'>
+												<div className='flex items-center gap-3'>
+													<div className='p-2 bg-secondary rounded-lg'>
+														<Zap className='h-4 w-4 text-secondary-foreground' />
+													</div>
+													<div>
+														<h3 className='font-semibold text-secondary-foreground text-sm'>Cálculo Automático</h3>
+														<p className='text-xs text-secondary-foreground/80'>OpenRouteService</p>
+													</div>
+												</div>
+												<Button type='button' onClick={handleCalculateRoute} disabled={isCalculatingRoute} size='sm'>
+													{isCalculatingRoute ? (
+														<>
+															<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+															Calculando...
+														</>
+													) : (
+														<>
+															<Route className='mr-2 h-4 w-4' />
+															Calcular Rota
+														</>
+													)}
+												</Button>
+											</div>
+										</Card>
+									</TabsContent>
+
+									{/* Distância Manual */}
+									<TabsContent value='km' className='flex-1'>
+										<Card className='p-4 h-full flex items-center justify-center border-muted bg-muted/20'>
+											<div className='space-y-6 w-full max-w-md'>
+												<div className='text-center space-y-2'>
+													<Ruler className='h-8 w-8 text-primary mx-auto mb-3' />
+													<div className='space-y-1'>
+														<Label className='text-lg font-semibold text-primary block'>Distância Total</Label>
+														<p className='text-sm text-muted-foreground leading-relaxed'>Digite a quilometragem da viagem</p>
+													</div>
+												</div>
+												<Input
+													type='number'
+													min={0}
+													step='0.1'
+													placeholder='Ex.: 850'
+													{...register("kmTotal")}
+													className='text-center text-lg font-semibold h-12 border-primary/30 focus:border-primary'
+													aria-label='Distância total em quilômetros'
+												/>
+											</div>
+										</Card>
+									</TabsContent>
+								</Tabs>
+							</div>
 							{rotaInfo && (
 								<Card className='p-4 bg-secondary/50 border-secondary'>
 									<div className='space-y-2'>

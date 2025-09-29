@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfiguracao } from "@/contexts/ConfiguracaoContext";
 import { AlertCircle, Book, Calculator, CheckCircle, DollarSign, ExternalLink, FileText, Info, Route, Settings } from "lucide-react";
 
 export default function DocumentacaoPage() {
+	const { configuracao } = useConfiguracao();
 	return (
 		<div className='p-6 max-w-5xl mx-auto space-y-8'>
 			{/* Header */}
@@ -14,7 +16,7 @@ export default function DocumentacaoPage() {
 					</div>
 				</div>
 				<h1 className='text-3xl font-bold'>Documentação</h1>
-				<p className='text-lg text-muted-foreground'>Guia completo para usar a Calculadora de Frete ANTT</p>
+				<p className='text-lg text-muted-foreground'>Guia completo para usar o Sistema ULog de Frete ANTT</p>
 			</div>
 
 			{/* Guia Rápido */}
@@ -226,10 +228,18 @@ export default function DocumentacaoPage() {
 					</div>
 					<div className='grid md:grid-cols-3 gap-4'>
 						<Badge variant='secondary' className='bg-green-100 text-green-800 p-3 justify-center'>
-							Tabela A (Lotação)
+							Tabela {configuracao.tabela} ({configuracao.modalidade === "lotacao" ? "Lotação" : "Carga Parcial"})
 						</Badge>
 						<Badge variant='secondary' className='bg-blue-100 text-blue-800 p-3 justify-center'>
-							Carga Geral
+							{configuracao.tipoCarga === "geral"
+								? "Carga Geral"
+								: configuracao.tipoCarga === "neogranel"
+								? "Neogranel"
+								: configuracao.tipoCarga === "frigorificada"
+								? "Carga Frigorificada"
+								: configuracao.tipoCarga === "perigosa"
+								? "Carga Perigosa"
+								: "Transporte de Veículos"}
 						</Badge>
 						<Badge variant='secondary' className='bg-purple-100 text-purple-800 p-3 justify-center'>
 							Valores Oficiais
@@ -249,7 +259,7 @@ export default function DocumentacaoPage() {
 				<CardContent>
 					<div className='space-y-2 text-amber-700'>
 						<p>
-							• Esta calculadora fornece o valor do <strong>frete mínimo oficial</strong> conforme a legislação
+							• O sistema ULog fornece o valor do <strong>frete mínimo oficial</strong> conforme a legislação
 						</p>
 						<p>• Os valores são calculados automaticamente com base na Resolução ANTT 5.867/2020</p>
 						<p>• Para casos específicos ou dúvidas sobre a legislação, consulte sempre um profissional especializado</p>

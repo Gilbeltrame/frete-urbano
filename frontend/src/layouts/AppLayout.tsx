@@ -1,4 +1,5 @@
 import ConfiguracoesModal, { ConfiguracaoSistema } from "@/components/ConfiguracoesModal";
+import UlogIcon from "@/components/UlogIcon";
 import { Badge } from "@/components/ui/badge";
 import {
 	Sidebar,
@@ -15,8 +16,8 @@ import {
 	SidebarRail,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Calculator, ChevronRight, ExternalLink, FileText, Github, Home, Info, TruckIcon } from "lucide-react";
-import React, { useState } from "react";
+import { ChevronRight, ExternalLink, FileSpreadsheet, FileText, Github, Home, Info, Package } from "lucide-react";
+import React from "react";
 
 interface AppLayoutProps {
 	children: React.ReactNode;
@@ -28,7 +29,8 @@ interface AppLayoutProps {
 
 const menuItems = [
 	{ id: "home", label: "Início", icon: Home },
-	{ id: "calculadora", label: "Calculadora", icon: Calculator },
+	{ id: "calculadora", label: "ULog Frete", icon: Package },
+	{ id: "conciliacao", label: "Conciliação", icon: FileSpreadsheet },
 ];
 
 const infoItems = [
@@ -37,16 +39,14 @@ const infoItems = [
 ];
 
 export default function AppLayout({ children, currentPage, onNavigate, configuracao, onConfigurationChange }: AppLayoutProps) {
-	const [localConfig, setLocalConfig] = useState<ConfiguracaoSistema>(
-		configuracao || {
-			tabela: "A",
-			tipoCarga: "geral",
-			modalidade: "lotacao",
-		}
-	);
+	// Sincronizar com configuração recebida sempre que ela mudar
+	const currentConfig = configuracao || {
+		tabela: "A" as const,
+		tipoCarga: "geral" as const,
+		modalidade: "lotacao" as const,
+	};
 
 	const handleConfigChange = (config: ConfiguracaoSistema) => {
-		setLocalConfig(config);
 		onConfigurationChange?.(config);
 	};
 	return (
@@ -55,12 +55,12 @@ export default function AppLayout({ children, currentPage, onNavigate, configura
 				<Sidebar variant='sidebar' className='border-r'>
 					<SidebarHeader className='border-b px-6 py-4'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-primary/10 rounded-lg'>
-								<TruckIcon className='h-6 w-6 text-primary' />
+							<div className='bg-primary/10 rounded-lg'>
+								<UlogIcon className='text-primary' size={50} />
 							</div>
 							<div>
-								<h2 className='text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent'>Frete ANTT</h2>
-								<p className='text-xs text-muted-foreground'>Calculadora ULog</p>
+								<h2 className='text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent'>ULog Sistema</h2>
+								<p className='text-xs text-muted-foreground'>Sistema de Cálculo ANTT</p>
 							</div>
 						</div>
 					</SidebarHeader>
@@ -125,16 +125,16 @@ export default function AppLayout({ children, currentPage, onNavigate, configura
 							</Badge>
 							<div className='text-xs text-muted-foreground text-center space-y-1'>
 								<p>
-									Tabela {localConfig.tabela} ({localConfig.modalidade === "lotacao" ? "Lotação" : "Carga Parcial"})
+									Tabela {currentConfig.tabela} ({currentConfig.modalidade === "lotacao" ? "Lotação" : "Carga Parcial"})
 								</p>
 								<p>
-									{localConfig.tipoCarga === "geral"
+									{currentConfig.tipoCarga === "geral"
 										? "Carga Geral"
-										: localConfig.tipoCarga === "neogranel"
+										: currentConfig.tipoCarga === "neogranel"
 										? "Neogranel"
-										: localConfig.tipoCarga === "frigorificada"
+										: currentConfig.tipoCarga === "frigorificada"
 										? "Frigorificada"
-										: localConfig.tipoCarga === "perigosa"
+										: currentConfig.tipoCarga === "perigosa"
 										? "Perigosa"
 										: "Veículos"}
 								</p>
@@ -151,9 +151,11 @@ export default function AppLayout({ children, currentPage, onNavigate, configura
 						<div className='flex h-14 items-center px-6 justify-between'>
 							<div className='flex items-center gap-4'>
 								<SidebarTrigger />
-								<span className='text-sm text-muted-foreground'>Frete Mínimo Oficial</span>
+								<div className='flex items-center gap-2'>
+									<span className='text-sm text-muted-foreground'>ULog - Frete Mínimo Oficial</span>
+								</div>
 							</div>
-							<ConfiguracoesModal configuracao={localConfig} onConfigurationChange={handleConfigChange} />
+							<ConfiguracoesModal configuracao={currentConfig} onConfigurationChange={handleConfigChange} />
 						</div>
 					</header>
 

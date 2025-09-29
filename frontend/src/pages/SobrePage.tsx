@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfiguracao } from "@/contexts/ConfiguracaoContext";
 import { Code, Database, ExternalLink, Github, Heart, Shield, TruckIcon, Users, Zap } from "lucide-react";
 
 export default function SobrePage() {
+	const { configuracao } = useConfiguracao();
 	return (
 		<div className='p-6 max-w-4xl mx-auto space-y-8'>
 			{/* Hero Section */}
@@ -13,7 +15,7 @@ export default function SobrePage() {
 						<TruckIcon className='h-12 w-12 text-primary' />
 					</div>
 				</div>
-				<h1 className='text-3xl font-bold'>Sobre a Calculadora de Frete ANTT</h1>
+				<h1 className='text-3xl font-bold'>Sobre o Sistema ULog de Frete ANTT</h1>
 				<p className='text-lg text-muted-foreground max-w-2xl mx-auto'>Uma ferramenta gratuita e precisa para calcular o frete mínimo oficial conforme a legislação brasileira</p>
 			</div>
 
@@ -48,17 +50,25 @@ export default function SobrePage() {
 					</CardHeader>
 					<CardContent>
 						<p className='text-muted-foreground mb-4'>
-							Nossa calculadora segue rigorosamente a Resolução ANTT 5.867/2020, garantindo que os valores calculados estejam sempre em conformidade com a legislação oficial.
+							O sistema ULog segue rigorosamente a Resolução ANTT 5.867/2020, garantindo que os valores calculados estejam sempre em conformidade com a legislação oficial.
 						</p>
 						<div className='space-y-2'>
 							<Badge variant='secondary' className='bg-green-100 text-green-800'>
 								Resolução ANTT 5.867/2020
 							</Badge>
 							<Badge variant='secondary' className='bg-blue-100 text-blue-800'>
-								Tabela A (Lotação)
+								Tabela {configuracao.tabela} ({configuracao.modalidade === "lotacao" ? "Lotação" : "Carga Parcial"})
 							</Badge>
 							<Badge variant='secondary' className='bg-purple-100 text-purple-800'>
-								Carga Geral
+								{configuracao.tipoCarga === "geral"
+									? "Carga Geral"
+									: configuracao.tipoCarga === "neogranel"
+									? "Neogranel"
+									: configuracao.tipoCarga === "frigorificada"
+									? "Carga Frigorificada"
+									: configuracao.tipoCarga === "perigosa"
+									? "Carga Perigosa"
+									: "Transporte de Veículos"}
 							</Badge>
 						</div>
 					</CardContent>

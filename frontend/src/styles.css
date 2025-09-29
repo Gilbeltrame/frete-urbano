@@ -191,3 +191,12 @@
 		letter-spacing: var(--tracking-normal);
 	}
 }
+
+/* Garantir alinhamento à esquerda em modais e diálogos */
+[data-radix-dialog-content] {
+	text-align: left;
+}
+
+[data-radix-dialog-content] * {
+	text-align: left;
+}

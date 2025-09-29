@@ -60,4 +60,24 @@ export const apiService = {
 
 		return result;
 	},
+
+	async calculateFreteMassa(itens: any[]) {
+		console.log("🚛 Iniciando cálculo de frete em massa para", itens.length, "itens");
+		
+		const response = await fetch(`${API_BASE}/api/calcula-frete-massa`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ itens }),
+		});
+
+		const result = await response.json();
+		
+		if (!response.ok) {
+			console.error("❌ Erro na API de frete em massa:", result);
+			throw new ApiError(result?.erro || "Erro ao calcular frete em massa", response.status);
+		}
+
+		console.log("✅ Cálculo de frete em massa concluído:", result.resumo);
+		return result;
+	},
 };

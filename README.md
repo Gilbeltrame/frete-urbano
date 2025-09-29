@@ -1,8 +1,9 @@
-# Calculadora de Frete Mínimo — ANTT
+# ULog - Sistema de Frete Mínimo ANTT
 
 Monorepo simples com **backend (Express)** + **frontend (Vite + React)**.
 
 ## 🧩 Estrutura
+
 ```
 frete-minimo/
   backend/
@@ -28,6 +29,7 @@ frete-minimo/
 ## ▶️ Como rodar
 
 ### 1) Backend
+
 ```bash
 cd backend
 npm i
@@ -36,6 +38,7 @@ npm run start
 ```
 
 ### 2) Frontend
+
 ```bash
 cd ../frontend
 npm i
@@ -46,18 +49,23 @@ npm run dev
 ```
 
 ## 🔑 Variáveis (frontend)
+
 Crie `.env.local`:
+
 ```
 VITE_ORS_API_KEY=coloque_sua_chave_aqui
 ```
 
 ## 🔗 Integração
+
 O frontend espera a API do backend na **mesma origem** por padrão. Se o backend rodar em outra porta, ajuste `API_BASE` no `App.tsx`.
 
 ## 🧮 Cálculo
+
 - Fórmula: `total = (km * CCD) + CC + 0.92 * CCD * km_retorno + pedagio_total`
 - Default: Tabela **A** (Lotação) • **Carga Geral** • **5 eixos** • **1 lote** (cada lote = uma viagem)
 - Retorno vazio e pedágio são opcionais (campos do formulário).
 
 ## 🗺️ Rotas
+
 - Botão **“Calcular KM pela rota (OpenRouteService)”** geocodifica CEP via **ViaCEP** → **ORS** (fallback: CEP direto no ORS) e preenche o **KM total** automaticamente.

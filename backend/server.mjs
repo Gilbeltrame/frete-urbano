@@ -137,40 +137,40 @@ function assertNumber(n, name) {
   }
 }
 
+// Função para calcular frete individual (reutilizável)
+function calcularFreteIndividual({ tabela = "A", tipoCarga, eixos, distancia_km, retorno_vazio_km = 0, pedagio_total = 0 }) {
+  if (!tipoCarga) throw new Error("Informe 'tipoCarga'.");
+  if (!eixos) throw new Error("Informe 'eixos'.");
+  assertNumber(distancia_km, "distancia_km");
+  assertNumber(retorno_vazio_km, "retorno_vazio_km");
+  assertNumber(pedagio_total, "pedagio_total");
+
+  const { CCD, CC, erro } = getCoeficientes({ tabela, tipoCarga, eixos });
+  if (erro) throw new Error(erro);
+
+  const pisoBase = distancia_km * CCD + CC;
+  const retornoVazioValor = retorno_vazio_km > 0 ? 0.92 * CCD * retorno_vazio_km : 0;
+  const total = pisoBase + retornoVazioValor + pedagio_total;
+
+  return {
+    input: { tabela, tipoCarga, eixos, distancia_km, retorno_vazio_km, pedagio_total },
+    coeficientes: { CCD, CC },
+    detalhamento: {
+      pisoBase: Math.round(pisoBase * 100) / 100,
+      retornoVazioValor: Math.round(retornoVazioValor * 100) / 100,
+      pedagio_total: Math.round(pedagio_total * 100) / 100,
+    },
+    total: Math.round(total * 100) / 100,
+    moeda: "BRL",
+  };
+}
+
+// Rota individual (mantida para compatibilidade)
 app.post("/api/calcula-frete", (req, res) => {
   try {
-    const {
-      tabela = "A",
-      tipoCarga,
-      eixos,
-      distancia_km,
-      retorno_vazio_km = 0,
-      pedagio_total = 0,
-    } = req.body || {};
-
-    if (!tipoCarga) throw new Error("Informe 'tipoCarga'.");
-    if (!eixos) throw new Error("Informe 'eixos'.");
-    assertNumber(distancia_km, "distancia_km");
-    assertNumber(retorno_vazio_km, "retorno_vazio_km");
-    assertNumber(pedagio_total, "pedagio_total");
-
-    const { CCD, CC, erro } = getCoeficientes({ tabela, tipoCarga, eixos });
-    if (erro) return res.status(400).json({ erro });
-
-    const pisoBase = distancia_km * CCD + CC;
-    const retornoVazioValor = retorno_vazio_km > 0 ? 0.92 * CCD * retorno_vazio_km : 0;
-    const total = pisoBase + retornoVazioValor + pedagio_total;
-
+    const resultado = calcularFreteIndividual(req.body || {});
     return res.json({
-      input: { tabela, tipoCarga, eixos, distancia_km, retorno_vazio_km, pedagio_total },
-      coeficientes: { CCD, CC },
-      detalhamento: {
-        pisoBase: Math.round(pisoBase * 100) / 100,
-        retornoVazioValor: Math.round(retornoVazioValor * 100) / 100,
-        pedagio_total: Math.round(pedagio_total * 100) / 100,
-      },
-      total: Math.round(total * 100) / 100,
-      moeda: "BRL",
+      ...resultado,
       observacoes: [
         "Fórmula: (km × CCD) + CC, com acréscimos opcionais de retorno vazio (92% do CCD × km_retorno) e pedágio.",
         "Lucro, tributos e despesas administrativas NÃO estão incluídos no piso — negocie à parte.",
@@ -178,6 +178,93 @@ app.post("/api/calcula-frete", (req, res) => {
     });
   } catch (err) {
     return res.status(400).json({ erro: err.message || "Erro ao calcular." });
+  }
+});
+
+// Nova rota para cálculo em massa (alta performance)
+app.post("/api/calcula-frete-massa", (req, res) => {
+  try {
+    const { itens } = req.body || {};
+    
+    if (!Array.isArray(itens)) {
+      return res.status(400).json({ erro: "Campo 'itens' deve ser um array." });
+    }
+
+    if (itens.length === 0) {
+      return res.status(400).json({ erro: "Array 'itens' não pode estar vazio." });
+    }
+
+    if (itens.length > 1000) {
+      return res.status(400).json({ erro: "Máximo de 1000 itens por requisição." });
+    }
+
+    const resultados = [];
+    const erros = [];
+
+    // Processar todos os itens em lote
+    for (let i = 0; i < itens.length; i++) {
+      const item = itens[i];
+      try {
+        const resultado = calcularFreteIndividual({
+          tabela: item.tabelaFrete || item.tabela || "A",
+          tipoCarga: item.tipoCarga,
+          eixos: item.qtEixos || item.eixos,
+          distancia_km: item.distanciaKm || item.distancia_km,
+          retorno_vazio_km: item.retornoVazioKm || item.retorno_vazio_km || 0,
+          pedagio_total: item.pedagioTotal || item.pedagio_total || 0,
+        });
+
+        resultados.push({
+          indice: i,
+          lote: item.lote || null,
+          placa: item.placa || null,
+          origem: item.cidadeOrigem || null,
+          destino: item.cidadeDestino || null,
+          valorCobrado: item.valorFrete || null,
+          freteMinimo: resultado,
+          status: "sucesso"
+        });
+
+      } catch (err) {
+        erros.push({
+          indice: i,
+          lote: item.lote || null,
+          placa: item.placa || null,
+          erro: err.message,
+          status: "erro"
+        });
+        
+        // Adicionar item com erro aos resultados para manter o índice
+        resultados.push({
+          indice: i,
+          lote: item.lote || null,
+          placa: item.placa || null,
+          erro: err.message,
+          status: "erro"
+        });
+      }
+    }
+
+    const resumo = {
+      totalItens: itens.length,
+      sucessos: resultados.filter(r => r.status === "sucesso").length,
+      erros: erros.length,
+      tempoProcessamento: new Date().getTime()
+    };
+
+    return res.json({
+      resumo,
+      resultados,
+      erros: erros.length > 0 ? erros : undefined,
+      observacoes: [
+        "Cálculo baseado na Resolução ANTT 5.867/2020",
+        "Fórmula: (km × CCD) + CC + retorno_vazio + pedágio",
+        "Valores não incluem lucro, tributos ou despesas administrativas"
+      ]
+    });
+
+  } catch (err) {
+    return res.status(500).json({ erro: err.message || "Erro interno do servidor." });
   }
 });
 
