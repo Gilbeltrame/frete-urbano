@@ -2,7 +2,7 @@ import { ConfiguracaoSistema } from "@/components/ConfiguracoesModal";
 import { ConfiguracaoProvider } from "@/contexts/ConfiguracaoContext";
 import AppLayout from "@/layouts/AppLayout";
 import CalculadoraPage from "@/pages/CalculadoraPage";
-import ConciliacaoPage from "@/pages/ConciliacaoPage";
+import ConciliacaoAsyncPage from "@/pages/ConciliacaoAsyncPage";
 import DocumentacaoPage from "@/pages/DocumentacaoPage";
 import HomePage from "@/pages/HomePage";
 import SobrePage from "@/pages/SobrePage";
@@ -23,7 +23,7 @@ export default function App() {
 			case "calculadora":
 				return <CalculadoraPage />;
 			case "conciliacao":
-				return <ConciliacaoPage />;
+				return <ConciliacaoAsyncPage />;
 			case "sobre":
 				return <SobrePage />;
 			case "documentacao":

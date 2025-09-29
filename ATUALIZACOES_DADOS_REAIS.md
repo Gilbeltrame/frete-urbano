@@ -95,7 +95,7 @@
 
 - ✅ **Web Workers** para processamento pesado
 - ✅ **Streaming** em tempo real
-- ✅ **Limites de uso** (1000 linhas, 1800 consultas/dia)
+- ✅ **Limites de uso** (200 linhas, 1800 consultas/dia)
 - ✅ **Validações de peso** por tipo de frota
 - ✅ **Validação de placas** brasileiras
 - ✅ **Export** de resultados

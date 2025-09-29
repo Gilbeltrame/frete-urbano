@@ -1,8 +1,8 @@
-# ✅ Implementação de Truncamento de Arquivo - 1000 Linhas
+# ✅ Implementação de Truncamento de Arquivo - 200 linhas
 
 ## 🎯 **Funcionalidade Implementada**
 
-O sistema agora **automaticamente trunca** arquivos com mais de 1000 linhas, processando apenas as primeiras 1000 e fornecendo **feedback visual claro** ao usuário.
+O sistema agora **automaticamente trunca** arquivos com mais de 200 linhas, processando apenas as primeiras 1000 e fornecendo **feedback visual claro** ao usuário.
 
 ## 🔧 **Alterações Realizadas**
 
@@ -10,8 +10,8 @@ O sistema agora **automaticamente trunca** arquivos com mais de 1000 linhas, pro
 
 **Novas Funcionalidades:**
 
-- ✅ **Detecção automática** de arquivos com +1000 linhas
-- ✅ **Truncamento automático** para 1000 linhas
+- ✅ **Detecção automática** de arquivos com +200 linhas
+- ✅ **Truncamento automático** para 200 linhas
 - ✅ **Estado `truncatedInfo`** com informações detalhadas
 - ✅ **Mensagem informativa** sobre o truncamento
 
@@ -55,26 +55,26 @@ O sistema agora **automaticamente trunca** arquivos com mais de 1000 linhas, pro
 
 **Lógica Atualizada:**
 
-- ✅ **Não rejeita** mais arquivos com +1000 linhas
+- ✅ **Não rejeita** mais arquivos com +200 linhas
 - ✅ **Calcula limite** com base nas linhas que serão processadas
 - ✅ **Warnings específicos** sobre truncamento
 - ✅ **Validação inteligente** de consultas diárias
 
 ## 📊 **Fluxo de Funcionamento**
 
-### **Quando arquivo tem ≤1000 linhas:**
+### **Quando arquivo tem ≤200 linhas:**
 
 1. Processa todas as linhas normalmente
 2. Nenhum alerta de truncamento
 3. Contador mostra total real
 
-### **Quando arquivo tem >1000 linhas:**
+### **Quando arquivo tem >200 linhas:**
 
 1. **Detecta** automaticamente o excesso
-2. **Trunca** para primeiras 1000 linhas
+2. **Trunca** para primeiras 200 linhas
 3. **Mostra alerta laranja** explicativo
 4. **Atualiza contador** "1000 de X linhas"
-5. **Processa normalmente** as 1000 linhas
+5. **Processa normalmente** as 200 linhas
 6. **Preserva** informação do total original
 
 ## 🎨 **Elementos Visuais**

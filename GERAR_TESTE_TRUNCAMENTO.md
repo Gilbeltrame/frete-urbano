@@ -1,6 +1,6 @@
-# Teste de Truncamento - Arquivo com Mais de 1000 Linhas
+# Teste de Truncamento - Arquivo com Mais de 200 linhas
 
-Este arquivo Python gera um CSV com mais de 1000 linhas para testar a funcionalidade de truncamento.
+Este arquivo Python gera um CSV com mais de s para testar a funcionalidade de truncamento.
 
 ```python
 import csv
@@ -114,7 +114,7 @@ with open('teste_1500_linhas.csv', 'w', newline='', encoding='utf-8') as csvfile
 
 print("Arquivo 'teste_1500_linhas.csv' criado com 1500 linhas!")
 print("Use este arquivo para testar a funcionalidade de truncamento.")
-print("O sistema deve processar apenas as primeiras 1000 linhas e mostrar o alerta de truncamento.")
+print("O sistema deve processar apenas as primeiras 200 linhas e mostrar o alerta de truncamento.")
 ```
 
 Execute este script Python para gerar o arquivo de teste.

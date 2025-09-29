@@ -1,6 +1,37 @@
-# ULog - Sistema de Frete Mínimo ANTT
+# Sistema ANTT - Análise de Frete Mínimo
 
-Monorepo simples com **backend (Express)** + **frontend (Vite + React)**.
+Sistema de análise de conformidade de frete conforme **Resolução ANTT 5.867/2020**.
+
+⚠️ **IMPORTANTE**: Este sistema opera com **100% de conformidade** - não há atalhos ou cálculos aproximados.
+
+## 🚀 Como Usar
+
+### 1. Iniciar o Backend (OBRIGATÓRIO)
+
+```bash
+# Execute o arquivo:
+start-backend.bat
+```
+
+O backend **DEVE** estar rodando em `http://localhost:3000` para garantir conformidade total.
+
+### 2. Iniciar o Frontend
+
+```bash
+# Execute o arquivo:
+start-frontend.bat
+```
+
+Frontend estará disponível em `http://localhost:5173`
+
+## ✅ Conformidade ANTT
+
+- **API Obrigatória**: Todos os cálculos são feitos via API backend que implementa a Resolução ANTT 5.867/2020
+- **Sem Fallbacks**: Se a API não estiver disponível, o processamento será interrompido
+- **Tabelas Oficiais**: Utiliza os coeficientes oficiais das tabelas A e B da ANTT
+- **Limite de 200 itens**: Para garantir performance e conformidade
+
+Monorepo com **backend (Express)** + **frontend (Vite + React)**.
 
 ## 🧩 Estrutura
 

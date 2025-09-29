@@ -5,11 +5,16 @@
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",
-    "dev": "cross-env NODE_ENV=development node server.mjs"
+    "dev": "node --watch server.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^17.2.2",
     "express": "^4.19.2",
-    "cross-env": "^7.0.3"
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
+    "uuid": "^9.0.1",
+    "xlsx": "^0.18.5"
   }
 }

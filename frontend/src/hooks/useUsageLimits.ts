@@ -9,7 +9,7 @@ interface UsageStats {
 }
 
 const LIMITE_CONSULTAS_DIARIO = 1800;
-const LIMITE_LINHAS_PLANILHA = 1000;
+const LIMITE_LINHAS_PLANILHA = 200;
 const STORAGE_KEY = "conciliacao_usage_stats";
 
 export const useUsageLimits = () => {
@@ -64,7 +64,7 @@ export const useUsageLimits = () => {
 			error?: string;
 			warning?: string;
 		} => {
-			// Arquivos com mais de 1000 linhas são truncados automaticamente
+			// Arquivos com mais de 200 linhas são truncados automaticamente
 			// Validamos o menor entre o número de linhas e o limite
 			const linhasAProcessar = Math.min(numeroLinhas, LIMITE_LINHAS_PLANILHA);
 

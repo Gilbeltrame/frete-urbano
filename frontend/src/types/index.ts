@@ -70,6 +70,7 @@ export interface OrcamentoItem {
 	tipoCarga: string;
 	tabelaFrete: string;
 	distanciaKm?: number;
+	retornoVazioKm?: number;
 	pedagioTotal?: number;
 }
 

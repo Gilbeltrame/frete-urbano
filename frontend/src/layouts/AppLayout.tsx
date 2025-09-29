@@ -30,7 +30,7 @@ interface AppLayoutProps {
 const menuItems = [
 	{ id: "home", label: "Início", icon: Home },
 	{ id: "calculadora", label: "ULog Frete", icon: Package },
-	{ id: "conciliacao", label: "Conciliação", icon: FileSpreadsheet },
+	{ id: "conciliacao", label: "Conciliação ANTT", icon: FileSpreadsheet },
 ];
 
 const infoItems = [

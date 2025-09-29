@@ -3,12 +3,53 @@
 // Fórmula base (Res. ANTT 5.867/2020): piso = (km * CCD) + CC
 // Extras opcionais: + pedágio; + retorno vazio (92% do CCD * km_retorno)
 
-import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import fs from "fs";
+import multer from "multer";
+import path from "path";
+import { jobManager } from "./jobManager.mjs";
+import { getCacheStats } from './routeService.mjs';
+
+// Carregar variáveis de ambiente
+dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+
+// Configurar multer para upload de arquivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = './uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    cb(null, `conciliacao_${timestamp}${ext}`);
+  }
+});
+
+const upload = multer({ 
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['.xlsx', '.xls', '.csv'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo não suportado. Use .xlsx, .xls ou .csv'));
+    }
+  },
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB
+  }
+});
 
 // -----------------------------
 // TABELAS DE COEFICIENTES (ANEXO II) - A e B
@@ -194,8 +235,8 @@ app.post("/api/calcula-frete-massa", (req, res) => {
       return res.status(400).json({ erro: "Array 'itens' não pode estar vazio." });
     }
 
-    if (itens.length > 1000) {
-      return res.status(400).json({ erro: "Máximo de 1000 itens por requisição." });
+    if (itens.length > 200) {
+      return res.status(400).json({ erro: "Máximo de 200 itens por requisição." });
     }
 
     const resultados = [];
@@ -268,7 +309,193 @@ app.post("/api/calcula-frete-massa", (req, res) => {
   }
 });
 
+// ENDPOINTS PARA PROCESSAMENTO ASSÍNCRONO
+
+// Upload e iniciar processamento de conciliação
+app.post('/api/conciliacao/upload', upload.single('planilha'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
+    }
+
+    // Validações de tamanho (50MB para processamento assíncrono)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (req.file.size > maxSize) {
+      return res.status(400).json({ 
+        erro: `Arquivo muito grande: ${(req.file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 50MB.` 
+      });
+    }
+
+    // Validação de tipo de arquivo
+    const allowedTypes = ['.xlsx', '.xls', '.csv'];
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    if (!allowedTypes.includes(ext)) {
+      return res.status(400).json({ 
+        erro: `Tipo de arquivo não suportado: ${ext}. Use apenas Excel (.xlsx, .xls) ou CSV.` 
+      });
+    }
+
+    // Criar job de processamento
+    const jobId = jobManager.createConciliacaoJob(req.file.path, {
+      originalName: req.file.originalname,
+      fileSize: req.file.size
+    });
+
+    res.json({
+      jobId,
+      message: 'Arquivo recebido, processamento iniciado',
+      filename: req.file.originalname,
+      fileSize: req.file.size
+    });
+
+  } catch (error) {
+    res.status(500).json({ erro: error.message });
+  }
+});
+
+// Verificar status do job
+app.get('/api/conciliacao/status/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const job = jobManager.getJobStatus(jobId);
+  
+  if (!job) {
+    return res.status(404).json({ erro: 'Job não encontrado' });
+  }
+
+  // Não retornar dados sensíveis como caminho do arquivo
+  const safeJob = {
+    id: job.id,
+    type: job.type,
+    status: job.status,
+    createdAt: job.createdAt,
+    startedAt: job.startedAt,
+    completedAt: job.completedAt,
+    progress: job.progress,
+    error: job.error,
+    stats: job.result?.stats
+  };
+
+  res.json(safeJob);
+});
+
+// Obter resultado do job
+app.get('/api/conciliacao/resultado/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const job = jobManager.getJobStatus(jobId);
+  
+  if (!job) {
+    return res.status(404).json({ erro: 'Job não encontrado' });
+  }
+
+  if (job.status !== 'completed') {
+    return res.status(400).json({ 
+      erro: 'Job ainda não foi concluído',
+      status: job.status 
+    });
+  }
+
+  res.json({
+    jobId,
+    stats: job.result.stats,
+    resultados: job.result.resultados,
+    erros: job.result.erros,
+    observacoes: [
+      "Cálculo baseado na Resolução ANTT 5.867/2020",
+      "Fórmula: (km × CCD) + CC + retorno_vazio + pedágio",
+      "Valores não incluem lucro, tributos ou despesas administrativas"
+    ]
+  });
+});
+
+// Cancelar job
+app.delete('/api/conciliacao/cancelar/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const cancelled = jobManager.cancelJob(jobId);
+  
+  if (!cancelled) {
+    return res.status(404).json({ erro: 'Job não encontrado' });
+  }
+
+  res.json({ message: 'Job cancelado com sucesso' });
+});
+
+// Listar jobs (para admin/debug - pode ser removido em produção)
+app.get('/api/conciliacao/jobs', (req, res) => {
+  const stats = jobManager.getStats();
+  res.json(stats);
+});
+
+// Status dos serviços de rota (OpenRouteService)
+app.get('/api/route/status', (req, res) => {
+  const cacheStats = getCacheStats();
+  res.json({
+    openRouteService: {
+      configured: cacheStats.hasApiKey,
+      geocodeCache: cacheStats.geocodeCache,
+      routeCache: cacheStats.routeCache
+    },
+    environment: {
+      hasOrsApiKey: !!process.env.ORS_API_KEY
+    }
+  });
+});
+
+// WebSocket/SSE para updates em tempo real (opcional)
+app.get('/api/conciliacao/stream/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+
+  const sendUpdate = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Enviar status inicial
+  const job = jobManager.getJobStatus(jobId);
+  if (job) {
+    sendUpdate({ type: 'status', data: job.progress });
+  }
+
+  // Escutar updates do job
+  const onProgress = (id, progress) => {
+    if (id === jobId) {
+      sendUpdate({ type: 'progress', data: progress });
+    }
+  };
+
+  const onCompleted = (id, job) => {
+    if (id === jobId) {
+      sendUpdate({ type: 'completed', data: job.result.stats });
+      res.end();
+    }
+  };
+
+  const onFailed = (id, job) => {
+    if (id === jobId) {
+      sendUpdate({ type: 'error', data: { error: job.error } });
+      res.end();
+    }
+  };
+
+  jobManager.on('jobProgress', onProgress);
+  jobManager.on('jobCompleted', onCompleted);
+  jobManager.on('jobFailed', onFailed);
+
+  // Cleanup quando cliente desconecta
+  req.on('close', () => {
+    jobManager.off('jobProgress', onProgress);
+    jobManager.off('jobCompleted', onCompleted);
+    jobManager.off('jobFailed', onFailed);
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`API de cálculo ANTT rodando na porta ${PORT}`);
+  console.log(`Processamento assíncrono ativo com Workers`);
 });
