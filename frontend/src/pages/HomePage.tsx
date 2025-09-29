@@ -15,13 +15,13 @@ export default function HomePage() {
 				<h1 className='text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent'>Calculadora de Frete ANTT</h1>
 				<p className='text-xl text-muted-foreground max-w-2xl mx-auto'>Calcule o frete mínimo oficial conforme a Resolução ANTT 5.867/2020 de forma rápida e precisa</p>
 				<div className='flex justify-center gap-2'>
-					<Badge variant='secondary' className='bg-green-100 text-green-800'>
+					<Badge variant='secondary' className='bg-primary/10 text-primary border-primary/20'>
 						Resolução ANTT 5.867/2020
 					</Badge>
-					<Badge variant='secondary' className='bg-blue-100 text-blue-800'>
+					<Badge variant='secondary' className='bg-secondary/80 text-secondary-foreground border-secondary'>
 						Tabela A (Lotação)
 					</Badge>
-					<Badge variant='secondary' className='bg-purple-100 text-purple-800'>
+					<Badge variant='secondary' className='bg-accent/80 text-accent-foreground border-accent'>
 						Carga Geral
 					</Badge>
 				</div>
@@ -29,11 +29,11 @@ export default function HomePage() {
 
 			{/* Features Grid */}
 			<div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
-				<Card className='hover:shadow-lg transition-shadow'>
+				<Card className='hover:shadow-lg transition-shadow border-primary/20 hover:border-primary/40'>
 					<CardHeader className='pb-3'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-blue-100 rounded-lg'>
-								<Calculator className='h-5 w-5 text-blue-600' />
+							<div className='p-2 bg-primary/10 rounded-lg'>
+								<Calculator className='h-5 w-5 text-primary' />
 							</div>
 							<CardTitle className='text-lg'>Cálculo Preciso</CardTitle>
 						</div>
@@ -43,11 +43,11 @@ export default function HomePage() {
 					</CardContent>
 				</Card>
 
-				<Card className='hover:shadow-lg transition-shadow'>
+				<Card className='hover:shadow-lg transition-shadow border-secondary/40 hover:border-secondary'>
 					<CardHeader className='pb-3'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-green-100 rounded-lg'>
-								<Route className='h-5 w-5 text-green-600' />
+							<div className='p-2 bg-secondary/30 rounded-lg'>
+								<Route className='h-5 w-5 text-secondary-foreground' />
 							</div>
 							<CardTitle className='text-lg'>Rota Automática</CardTitle>
 						</div>
@@ -57,11 +57,11 @@ export default function HomePage() {
 					</CardContent>
 				</Card>
 
-				<Card className='hover:shadow-lg transition-shadow'>
+				<Card className='hover:shadow-lg transition-shadow border-accent/40 hover:border-accent'>
 					<CardHeader className='pb-3'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-purple-100 rounded-lg'>
-								<Zap className='h-5 w-5 text-purple-600' />
+							<div className='p-2 bg-accent/30 rounded-lg'>
+								<Zap className='h-5 w-5 text-accent-foreground' />
 							</div>
 							<CardTitle className='text-lg'>Rápido e Fácil</CardTitle>
 						</div>
@@ -71,11 +71,11 @@ export default function HomePage() {
 					</CardContent>
 				</Card>
 
-				<Card className='hover:shadow-lg transition-shadow'>
+				<Card className='hover:shadow-lg transition-shadow border-muted hover:border-muted-foreground/30'>
 					<CardHeader className='pb-3'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-orange-100 rounded-lg'>
-								<Shield className='h-5 w-5 text-orange-600' />
+							<div className='p-2 bg-muted rounded-lg'>
+								<Shield className='h-5 w-5 text-muted-foreground' />
 							</div>
 							<CardTitle className='text-lg'>100% Conforme</CardTitle>
 						</div>
@@ -85,11 +85,11 @@ export default function HomePage() {
 					</CardContent>
 				</Card>
 
-				<Card className='hover:shadow-lg transition-shadow'>
+				<Card className='hover:shadow-lg transition-shadow border-primary/20 hover:border-primary/40'>
 					<CardHeader className='pb-3'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-red-100 rounded-lg'>
-								<Clock className='h-5 w-5 text-red-600' />
+							<div className='p-2 bg-primary/10 rounded-lg'>
+								<Clock className='h-5 w-5 text-primary' />
 							</div>
 							<CardTitle className='text-lg'>Disponível 24/7</CardTitle>
 						</div>
@@ -99,11 +99,11 @@ export default function HomePage() {
 					</CardContent>
 				</Card>
 
-				<Card className='hover:shadow-lg transition-shadow'>
+				<Card className='hover:shadow-lg transition-shadow border-secondary/40 hover:border-secondary'>
 					<CardHeader className='pb-3'>
 						<div className='flex items-center gap-3'>
-							<div className='p-2 bg-indigo-100 rounded-lg'>
-								<DollarSign className='h-5 w-5 text-indigo-600' />
+							<div className='p-2 bg-secondary/30 rounded-lg'>
+								<DollarSign className='h-5 w-5 text-secondary-foreground' />
 							</div>
 							<CardTitle className='text-lg'>Gratuito</CardTitle>
 						</div>

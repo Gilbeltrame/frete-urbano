@@ -26,13 +26,13 @@ export function Alerts({ erro, sucesso }: AlertsProps) {
 			)}
 
 			{sucesso && !erro && (
-				<Card className='border-green-500/50 bg-green-50/50 dark:bg-green-950/20 py-1'>
+				<Card className='border-secondary bg-secondary/20 py-1'>
 					<CardContent className='pt-1'>
 						<div className='flex items-center gap-3'>
-							<CheckCircle2 className='h-5 w-5 text-green-600' />
+							<CheckCircle2 className='h-5 w-5 text-secondary-foreground' />
 							<div className='flex-1'>
-								<p className='text-green-700 dark:text-green-400 font-medium'>Sucesso</p>
-								<p className='text-green-600 dark:text-green-500 text-sm'>{sucesso}</p>
+								<p className='text-secondary-foreground font-medium'>Sucesso</p>
+								<p className='text-secondary-foreground/80 text-sm'>{sucesso}</p>
 							</div>
 						</div>
 					</CardContent>

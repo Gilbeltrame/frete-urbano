@@ -1,3 +1,5 @@
+import { ConfiguracaoSistema } from "@/components/ConfiguracoesModal";
+import { ConfiguracaoProvider } from "@/contexts/ConfiguracaoContext";
 import AppLayout from "@/layouts/AppLayout";
 import CalculadoraPage from "@/pages/CalculadoraPage";
 import DocumentacaoPage from "@/pages/DocumentacaoPage";
@@ -7,6 +9,11 @@ import { useState } from "react";
 
 export default function App() {
 	const [currentPage, setCurrentPage] = useState("home");
+	const [configuracao, setConfiguracao] = useState<ConfiguracaoSistema>({
+		tabela: "A",
+		tipoCarga: "geral",
+		modalidade: "lotacao",
+	});
 
 	const renderPage = () => {
 		switch (currentPage) {
@@ -24,8 +31,10 @@ export default function App() {
 	};
 
 	return (
-		<AppLayout currentPage={currentPage} onNavigate={setCurrentPage}>
-			{renderPage()}
-		</AppLayout>
+		<ConfiguracaoProvider configuracao={configuracao} onConfigurationChange={setConfiguracao}>
+			<AppLayout currentPage={currentPage} onNavigate={setCurrentPage} configuracao={configuracao} onConfigurationChange={setConfiguracao}>
+				{renderPage()}
+			</AppLayout>
+		</ConfiguracaoProvider>
 	);
 }
