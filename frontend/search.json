@@ -1,0 +1,114 @@
+{
+  "geocoding": {
+    "version": "0.2",
+    "attribution": "https://openrouteservice.org/terms-of-service/#attribution-geocode",
+    "query": {
+      "text": "Rua Deputado Antônio Edu Vieira, Saco dos Limões, Florianópolis/SC, Brasil",
+      "size": 1,
+      "layers": [
+        "venue",
+        "street",
+        "country",
+        "macroregion",
+        "region",
+        "county",
+        "localadmin",
+        "locality",
+        "borough",
+        "neighbourhood",
+        "continent",
+        "empire",
+        "dependency",
+        "macrocounty",
+        "macrohood",
+        "microhood",
+        "disputed",
+        "postalcode",
+        "ocean",
+        "marinearea"
+      ],
+      "private": false,
+      "boundary.country": [
+        "BRA"
+      ],
+      "lang": {
+        "name": "Portuguese",
+        "iso6391": "pt",
+        "iso6393": "por",
+        "via": "header",
+        "defaulted": false
+      },
+      "querySize": 20,
+      "parser": "libpostal",
+      "parsed_text": {
+        "street": "rua deputado antônio edu vieira",
+        "neighbourhood": "saco dos limões",
+        "city": "florianópolis/",
+        "state": "sc",
+        "country": "brasil"
+      }
+    },
+    "warnings": [
+      "performance optimization: excluding 'address' layer"
+    ],
+    "engine": {
+      "name": "Pelias",
+      "author": "Mapzen",
+      "version": "1.0"
+    },
+    "timestamp": 1758658607788
+  },
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.53605,
+          -27.60864
+        ]
+      },
+      "properties": {
+        "id": "1126020767",
+        "gid": "whosonfirst:locality:1126020767",
+        "layer": "locality",
+        "source": "whosonfirst",
+        "source_id": "1126020767",
+        "name": "Saco dos Limoes",
+        "confidence": 0.6,
+        "match_type": "fallback",
+        "accuracy": "centroid",
+        "country": "Brasil",
+        "country_gid": "whosonfirst:country:85633009",
+        "country_a": "BRA",
+        "macroregion": "Sul",
+        "macroregion_gid": "whosonfirst:macroregion:1511777409",
+        "region": "Santa Catarina",
+        "region_gid": "whosonfirst:region:85682021",
+        "region_a": "SC",
+        "county": "Florianópolis",
+        "county_gid": "whosonfirst:county:102060383",
+        "localadmin": "Florianópolis",
+        "localadmin_gid": "whosonfirst:localadmin:404565395",
+        "locality": "Saco dos Limoes",
+        "locality_gid": "whosonfirst:locality:1126020767",
+        "continent": "América do Sul",
+        "continent_gid": "whosonfirst:continent:102191577",
+        "label": "Saco dos Limoes, SC, Brasil"
+      },
+      "bbox": [
+        -48.55605,
+        -27.62864,
+        -48.51605,
+        -27.58864
+      ]
+    }
+  ],
+  "bbox": [
+    -48.55605,
+    -27.62864,
+    -48.51605,
+    -27.58864
+  ]
+}
