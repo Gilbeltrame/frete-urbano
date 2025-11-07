@@ -38,19 +38,30 @@ function getRoadDistanceFactor(distanceKm: number): number {
 }
 
 export const routeService = {
-	// Geocoding usando múltiplas fontes
+	// Geocoding usando múltiplas fontes com fallback progressivo
 	async geocodeMultiSource(text: string): Promise<Coordinates> {
-		const errors = [];
+		const errors: string[] = [];
 
+		// 1. ORS (se chave presente)
 		if (ORS_API_KEY) {
 			try {
 				return await this.geocodeORS(text);
 			} catch (error) {
-				errors.push(`ORS: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+				errors.push(`ORS: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
 			}
+		} else {
+			errors.push('ORS: chave não definida (VITE_ORS_API_KEY)');
 		}
 
-		throw new ApiError(`Não foi possível encontrar as coordenadas para: ${text}. Erros: ${errors.join("; ")}`);
+		// 2. Nominatim (fallback público)
+		try {
+			const nominatim = await this.geocodeNominatim(text);
+			if (nominatim) return nominatim;
+		} catch (e) {
+			errors.push('Nominatim: falha inesperada');
+		}
+
+		throw new ApiError(`Não foi possível encontrar as coordenadas para: ${text}. Erros: ${errors.join('; ')}`);
 	},
 
 	async geocodeORS(text: string): Promise<Coordinates> {
