@@ -1,16 +1,38 @@
-# Backend Dockerfile
-FROM node:20-alpine AS base
-WORKDIR /app
+###############################
+# Backend Dockerfile (optimized)
+# - Caching: copy only manifests first
+# - Security: run as non-root user
+# - Healthcheck: simple HTTP probe
+# - Smaller layer churn: single stage (no build step needed)
+###############################
+FROM node:20-alpine
 
-# Instala dependências (aproveita cache)
-COPY backend/package.json ./backend/package.json
+# Set working directory directly to backend folder
 WORKDIR /app/backend
-RUN npm install --production
 
-# Copia código fonte
+# Install dependencies using manifest caching (copies lockfile if present)
+COPY backend/package*.json ./
+RUN npm install --production --no-audit --no-fund \
+	&& npm cache clean --force
+
+# Copy application source code
 COPY backend/ .
 
-# Porta exposta
-EXPOSE 3000
+# Create uploads directory ensuring write perms even after user switch
+RUN mkdir -p uploads \
+	&& adduser -D -H appuser \
+	&& chown -R appuser:appuser /app/backend
+
+# Switch to non-root user for security
+USER appuser
+
+# Environment vars & port
 ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+# Healthcheck (Docker will invoke periodically) - keeps simple, avoids curl/wget dependency
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=10s CMD node -e "require('http').get('http://localhost:3000/api/route/status',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
+# Start the server
 CMD ["node", "server.mjs"]
