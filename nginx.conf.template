@@ -1,0 +1,33 @@
+## nginx.conf.template for frontend runtime
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Allow larger request bodies for file uploads proxied to the backend
+    client_max_body_size 100M;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy for /api/* to the backend. BACKEND_HOST will be replaced at container start.
+    location /api/ {
+        proxy_pass http://$BACKEND_HOST:3000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+        proxy_buffering off;
+    }
+
+    # Static cache
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg)$ {
+        expires 7d;
+        access_log off;
+    }
+}
