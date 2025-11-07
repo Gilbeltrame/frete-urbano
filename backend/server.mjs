@@ -11,6 +11,7 @@ import multer from "multer";
 import path from "path";
 import { jobManager } from "./jobManager.mjs";
 import { getCacheStats } from './routeService.mjs';
+import fetch from 'node-fetch';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -438,6 +439,66 @@ app.get('/api/route/status', (req, res) => {
       hasOrsApiKey: !!process.env.ORS_API_KEY
     }
   });
+});
+
+// Simple in-memory cache for geocoding responses
+const geocodeCache = new Map(); // key -> { ts, data }
+const GEOCODE_TTL_MS = Number(process.env.GEOCODE_TTL_MS || 24 * 60 * 60 * 1000); // 24h
+
+function getCache(key) {
+  const entry = geocodeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > GEOCODE_TTL_MS) {
+    geocodeCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key, data) {
+  geocodeCache.set(key, { ts: Date.now(), data });
+}
+
+// Proxy route for Nominatim geocoding to avoid CORS / 403 due to missing User-Agent
+app.get('/api/geocode', async (req, res) => {
+  try {
+    const { q, format = 'json', limit = '1' } = req.query;
+    if (!q) return res.status(400).json({ erro: "Parâmetro 'q' é obrigatório" });
+
+    const cacheKey = `${q}::${format}::${limit}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ fromCache: true, results: cached });
+    }
+
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=${encodeURIComponent(format)}&limit=${encodeURIComponent(limit)}&q=${encodeURIComponent(q)}`;
+
+    // Build headers – Nominatim requires a valid User-Agent and preferably Referer or email
+    const userAgent = process.env.NOMINATIM_USER_AGENT || 'frete-urbano/1.0 (+https://github.com/Gilbeltrame/frete-urbano)';
+    const referer = process.env.NOMINATIM_REFERER || req.get('referer') || '';
+
+    const response = await fetch(nominatimUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': userAgent,
+        ...(referer ? { Referer: referer } : {}),
+        'Accept-Language': req.get('accept-language') || 'pt-BR',
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      return res.status(response.status).send(text || { erro: `Nominatim returned ${response.status}` });
+    }
+
+    const data = await response.json();
+    setCache(cacheKey, data);
+    return res.json({ fromCache: false, results: data });
+
+  } catch (err) {
+    console.error('Geocode proxy error:', err);
+    return res.status(500).json({ erro: err.message || 'Erro no proxy de geocoding' });
+  }
 });
 
 // WebSocket/SSE para updates em tempo real (opcional)
