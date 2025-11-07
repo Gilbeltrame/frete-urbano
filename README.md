@@ -89,7 +89,63 @@ VITE_ORS_API_KEY=coloque_sua_chave_aqui
 
 ## 🔗 Integração
 
-O frontend espera a API do backend na **mesma origem** por padrão. Se o backend rodar em outra porta, ajuste `API_BASE` no `App.tsx`.
+Por padrão em desenvolvimento usamos origens separadas (`localhost:5173` e `localhost:3000`). Em produção você pode escolher:
+
+### Multi-domain (recomendado para simplicidade)
+
+Frontend: `https://app.seudominio.com`  
+Backend/API: `https://api.seudominio.com`
+
+1. Crie dois apps/projetos no Dockploy/Hostinger ou mapeie dois domínios para o mesmo compose (dependendo do painel):
+   - Backend expõe porta 3000 → domínio `api.seudominio.com`
+   - Frontend expõe porta 8080 → domínio `app.seudominio.com`
+2. Defina variável `FRONTEND_API_BASE_URL` no ambiente de build do frontend (compose build arg) apontando para a URL pública da API (ex: `https://api.seudominio.com`).
+3. O `Dockerfile.frontend` injeta `VITE_API_BASE_URL` no build (ARG + ENV). Dentro do código, use `import.meta.env.VITE_API_BASE_URL`.
+4. Certifique-se de NÃO hardcodear `http://backend:3000` em produção.
+
+### Single-domain (alternativa)
+
+Servir SPA e proxy `/api` via Nginx. Nesse modo você edita `nginx.conf` adicionando:
+
+```
+location /api/ {
+  proxy_pass http://backend:3000/api/;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+}
+```
+
+E então o frontend chama apenas `/api/...`.
+
+### Variáveis de Ambiente em Produção
+
+- Backend: definir `ORS_API_KEY` como secret (não commitá a chave real).
+- Frontend: definir build arg `VITE_API_BASE_URL`.
+
+### Passos de Deploy (Dockploy / Hostinger)
+
+1. Conectar repositório GitHub `Gilbeltrame/frete-urbano`.
+2. Tipo: Docker Compose — arquivo `docker-compose.yml` na raiz.
+3. Adicionar variável/secret `ORS_API_KEY` ao serviço backend (ou usar arquivo `.env` montado).
+4. Adicionar variável `FRONTEND_API_BASE_URL=https://api.seudominio.com` para build do frontend.
+5. Executar primeiro build/deploy. Verificar logs: backend deve logar `API de cálculo ANTT rodando na porta 3000`.
+6. Testar endpoint: `curl https://api.seudominio.com/api/calcula-frete` (POST com JSON válido).
+7. Acessar frontend: `https://app.seudominio.com` e verificar chamadas à API (Network → 200).
+
+### Healthchecks (opcional)
+
+Você pode adicionar no `docker-compose.yml`:
+
+```
+  backend:
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/route/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+```
+
+---
 
 ## 🧮 Cálculo
 

@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: frete-backend
+    env_file:
+      - backend/.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads-data:/app/backend/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        # Defina FRONTEND_API_BASE_URL em um .env (ex: https://api.seudominio.com)
+        VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL}
+    container_name: frete-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  uploads-data:
