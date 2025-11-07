@@ -319,11 +319,11 @@ app.post('/api/conciliacao/upload', upload.single('planilha'), (req, res) => {
       return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
     }
 
-    // Validações de tamanho (50MB para processamento assíncrono)
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    // Validações de tamanho (100MB para processamento assíncrono)
+    const maxSize = 100 * 1024 * 1024; // 100MB
     if (req.file.size > maxSize) {
       return res.status(400).json({ 
-        erro: `Arquivo muito grande: ${(req.file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 50MB.` 
+        erro: `Arquivo muito grande: ${(req.file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 100MB.` 
       });
     }
 

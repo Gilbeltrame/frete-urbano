@@ -222,9 +222,9 @@ export function useConciliacaoAsync() {
 					throw new Error(error);
 				}
 
-				if (file.size > 50 * 1024 * 1024) {
-					// 50MB para uploads assíncronos
-					const error = `Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 50MB.`;
+				if (file.size > 100 * 1024 * 1024) {
+					// 100MB para uploads assíncronos
+					const error = `Arquivo muito grande: ${(file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 100MB.`;
 					addLog("error", error, "UPLOAD", { fileName: file.name, fileSize: file.size });
 					throw new Error(error);
 				}
