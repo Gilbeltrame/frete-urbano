@@ -83,6 +83,11 @@ export function useConciliacaoAsync() {
 	// Refs para controle
 	const eventSourceRef = useRef<EventSource | null>(null);
 	const pollingRef = useRef<number | null>(null);
+	// XHR ref para permitir cancelamento do upload
+	const xhrRef = useRef<XMLHttpRequest | null>(null);
+
+	// Client-side upload progress (0-100). Used to show progress while the file is uploading
+	const [clientUploadProgress, setClientUploadProgress] = useState<number>(0);
 
 	// Estados derivados
 	const isProcessing = jobStatus?.status === "running" || jobStatus?.status === "queued";
@@ -90,7 +95,11 @@ export function useConciliacaoAsync() {
 	const hasError = jobStatus?.status === "failed";
 
 	// Estados de progresso
-	const uploadProgress = jobStatus?.progress?.percentage || 0;
+	// Separar progresso do upload cliente e progresso reportado pelo servidor
+	const clientUploadProg = clientUploadProgress; // 0-100 while uploading
+	const serverProgress = jobStatus?.progress?.percentage || 0; // server-side processing percentage
+	// Backwards-compatible aggregated uploadProgress (mantido para consumidores existentes)
+	const uploadProgress = clientUploadProg > 0 ? clientUploadProg : serverProgress;
 	const currentStep = jobStatus?.progress?.step || "";
 	const statusMessage = jobStatus?.progress?.message || "";
 	const processedCount = jobStatus?.progress?.processed || 0;
@@ -252,29 +261,66 @@ export function useConciliacaoAsync() {
 				const formData = new FormData();
 				formData.append("planilha", file);
 
-				const response = await fetch(`${API_BASE_URL}/conciliacao/upload`, {
-					method: "POST",
-					body: formData,
+				// Enviar via XMLHttpRequest para obter progresso de upload
+				const uploadResult: any = await new Promise((resolve, reject) => {
+					const xhr = new XMLHttpRequest();
+					xhr.open("POST", `${API_BASE_URL}/conciliacao/upload`);
+					xhrRef.current = xhr;
+
+					xhr.upload.onprogress = (event) => {
+						if (event.lengthComputable) {
+							const percent = Math.round((event.loaded / event.total) * 100);
+							setClientUploadProgress(percent);
+						}
+					};
+
+					xhr.onload = () => {
+						try {
+							if (xhr.status >= 200 && xhr.status < 300) {
+								const json = JSON.parse(xhr.responseText || "{}");
+								xhrRef.current = null;
+								resolve(json);
+							} else {
+								// tentar parsear resposta de erro JSON
+								let parsed: any = {};
+								try {
+									parsed = JSON.parse(xhr.responseText || "{}");
+								} catch (e) {}
+								xhrRef.current = null;
+								reject(new Error(parsed?.erro || `Erro no upload: ${xhr.status}`));
+							}
+						} catch (e) {
+							reject(e);
+						}
+					};
+
+					xhr.onerror = () => {
+						xhrRef.current = null;
+						reject(new Error("Falha na requisição (network)"));
+					};
+					xhr.ontimeout = () => {
+						xhrRef.current = null;
+						reject(new Error("Timeout no upload"));
+					};
+
+					xhr.send(formData);
 				});
 
-				if (!response.ok) {
-					const errorData = await response.json().catch(() => ({}));
-					throw new Error(errorData.erro || `Erro no upload: ${response.status}`);
-				}
-
-				const uploadResult = await response.json();
 				const jobId = uploadResult.jobId;
 
 				setCurrentJobId(jobId);
 				setStartTime(Date.now()); // Iniciar cronômetro
 				addLog("info", `Job criado com sucesso: ${jobId}`, "UPLOAD", uploadResult);
 
+				// Zerar progresso cliente depois do upload para deixar o server reportar o progresso real
+				setClientUploadProgress(0);
 				// Iniciar monitoramento
 				startMonitoring(jobId);
 
 				return jobId;
 			} catch (error) {
 				addLog("error", `Erro no upload: ${error.message}`, "UPLOAD");
+				setClientUploadProgress(0);
 				throw error;
 			}
 		},
@@ -402,8 +448,21 @@ export function useConciliacaoAsync() {
 		[addLog, registrarUso]
 	);
 
-	// Cancelar processamento
+	// Cancelar upload em andamento (client-side)
+	const cancelarUpload = useCallback(() => {
+		if (xhrRef.current) {
+			xhrRef.current.abort();
+			xhrRef.current = null;
+			setClientUploadProgress(0);
+			addLog("info", "Upload cancelado pelo usuário", "UPLOAD");
+		}
+	}, [addLog]);
+
+	// Cancelar processamento (server-side + abort upload se necessário)
 	const cancelarProcessamento = useCallback(async () => {
+		// abort client upload first
+		cancelarUpload();
+		if (!currentJobId) return;
 		if (!currentJobId) return;
 
 		try {
@@ -430,7 +489,7 @@ export function useConciliacaoAsync() {
 		} catch (error) {
 			addLog("error", `Erro ao cancelar: ${error.message}`, "CANCEL");
 		}
-	}, [currentJobId, addLog]);
+	}, [currentJobId, addLog, cancelarUpload]);
 
 	// Limpar dados
 	const limparDados = useCallback(() => {
@@ -546,6 +605,8 @@ export function useConciliacaoAsync() {
 
 		// Estados de progresso
 		uploadProgress,
+		clientUploadProgress: clientUploadProg,
+		serverProgress,
 		currentStep,
 		statusMessage,
 		processedCount,
@@ -562,6 +623,7 @@ export function useConciliacaoAsync() {
 		// Ações
 		uploadArquivo,
 		cancelarProcessamento,
+		cancelarUpload,
 		limparDados,
 		exportarResultados,
 		clearLogs,

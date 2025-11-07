@@ -14,7 +14,10 @@ interface ProcessamentoBannerProps {
 	isProcessing: boolean;
 	isCompleted: boolean;
 	hasError: boolean;
-	uploadProgress: number;
+	// client-side upload progress (while uploading)
+	clientUploadProgress?: number;
+	// server-side processing progress
+	serverProgress?: number;
 	currentStep: string;
 	statusMessage: string;
 	processedCount: number;
@@ -30,7 +33,8 @@ export const ProcessamentoBanner: React.FC<ProcessamentoBannerProps> = ({
 	isProcessing,
 	isCompleted,
 	hasError,
-	uploadProgress,
+	clientUploadProgress = 0,
+	serverProgress = 0,
 	currentStep,
 	statusMessage,
 	processedCount,
@@ -61,7 +65,7 @@ export const ProcessamentoBanner: React.FC<ProcessamentoBannerProps> = ({
 					<div className='flex items-center gap-2 text-xs'>
 						{isProcessing && (
 							<Badge variant='secondary' className='text-blue-700 bg-blue-100'>
-								{processedCount}/{totalCount} itens • {uploadProgress}% • {timeRemaining} restantes
+								{processedCount}/{totalCount} itens • Upload {clientUploadProgress}% • Proc. {serverProgress}% • {timeRemaining} restantes
 							</Badge>
 						)}
 						{isCompleted && (
@@ -94,8 +98,9 @@ export const ProcessamentoBanner: React.FC<ProcessamentoBannerProps> = ({
 				<div className='space-y-2'>
 					{isProcessing && (
 						<>
-							{uploadProgress > 0 ? (
-								<Progress value={uploadProgress} className='h-2' />
+							{clientUploadProgress > 0 || serverProgress > 0 ? (
+								// If client upload is in progress, show it as primary. Otherwise show server progress.
+								<Progress value={clientUploadProgress > 0 ? clientUploadProgress : serverProgress} className='h-2' />
 							) : (
 								<div className='h-2 w-full rounded bg-muted relative overflow-hidden' aria-label='Carregando...'>
 									{/* Barra indeterminada animada */}
@@ -103,8 +108,8 @@ export const ProcessamentoBanner: React.FC<ProcessamentoBannerProps> = ({
 								</div>
 							)}
 							<div className='flex justify-between text-xs text-muted-foreground'>
-								<span>{currentStep || (uploadProgress === 0 ? "Preparando processamento" : "")}</span>
-								<span>{statusMessage || (uploadProgress === 0 ? "Inicializando serviços e lendo arquivo" : "")}</span>
+								<span>{currentStep || (clientUploadProgress === 0 && serverProgress === 0 ? "Preparando processamento" : "")}</span>
+								<span>{statusMessage || (clientUploadProgress === 0 && serverProgress === 0 ? "Inicializando serviços e lendo arquivo" : "")}</span>
 							</div>
 						</>
 					)}
