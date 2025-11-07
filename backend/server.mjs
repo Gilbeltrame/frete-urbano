@@ -8,10 +8,10 @@ import dotenv from "dotenv";
 import express from "express";
 import fs from "fs";
 import multer from "multer";
+import fetch from 'node-fetch';
 import path from "path";
 import { jobManager } from "./jobManager.mjs";
 import { getCacheStats } from './routeService.mjs';
-import fetch from 'node-fetch';
 
 // Carregar variáveis de ambiente
 dotenv.config();
