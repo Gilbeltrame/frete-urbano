@@ -47,10 +47,10 @@ export const routeService = {
 			try {
 				return await this.geocodeORS(text);
 			} catch (error) {
-				errors.push(`ORS: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+				errors.push(`ORS: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
 			}
 		} else {
-			errors.push('ORS: chave não definida (VITE_ORS_API_KEY)');
+			errors.push("ORS: chave não definida (VITE_ORS_API_KEY)");
 		}
 
 		// 2. Nominatim (fallback público)
@@ -58,10 +58,10 @@ export const routeService = {
 			const nominatim = await this.geocodeNominatim(text);
 			if (nominatim) return nominatim;
 		} catch (e) {
-			errors.push('Nominatim: falha inesperada');
+			errors.push("Nominatim: falha inesperada");
 		}
 
-		throw new ApiError(`Não foi possível encontrar as coordenadas para: ${text}. Erros: ${errors.join('; ')}`);
+		throw new ApiError(`Não foi possível encontrar as coordenadas para: ${text}. Erros: ${errors.join("; ")}`);
 	},
 
 	async geocodeORS(text: string): Promise<Coordinates> {
