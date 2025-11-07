@@ -6,7 +6,7 @@ import XLSX from 'xlsx';
 import { calculateCityDistance } from './routeService.mjs';
 
 // Constantes de limitação
-const LIMITE_LINHAS_PLANILHA = 20;
+const LIMITE_LINHAS_PLANILHA = 10;
 
 // Se este arquivo está sendo executado como worker
 if (!isMainThread) {
@@ -122,6 +122,18 @@ if (!isMainThread) {
     );
     columnMapping.uf_destino = ufDestinoIndex;
 
+    // Buscar coluna Lote (opcional)
+    const loteIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('lote'));
+    columnMapping.lote = loteIndex; // -1 se não existir
+
+    // Buscar coluna Placa (opcional)
+    const placaIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('placa'));
+    columnMapping.placa = placaIndex;
+
+    // Buscar coluna Transportadora (opcional)
+    const transportadoraIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('transportadora'));
+    columnMapping.transportadora = transportadoraIndex;
+
     // Buscar coluna valor de frete (nova)
     const valorFreteIndex = headers.findIndex(h => 
       h && (h.toString().toLowerCase().includes('valor frete') || 
@@ -129,6 +141,23 @@ if (!isMainThread) {
             h.toString().toLowerCase().includes('frete'))
     );
     columnMapping.valor_frete = valorFreteIndex;
+
+    // Buscar coluna Data Emissão (flexível em acentuação / abreviação)
+    function normalizar(str) {
+      return str.toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    }
+    const dataEmissaoIndex = headers.findIndex(h => {
+      if (!h) return false;
+      const n = normalizar(h);
+      return (
+        n.includes('data emissao') ||
+        n.includes('Data Emissao') ||
+        n.includes('dt emissao') ||
+        n.includes('data_emissao') ||
+        n.includes('dt_emissao')
+      );
+    });
+    columnMapping.data_emissao = dataEmissaoIndex; // -1 se não existir
 
     // Buscar coluna tipo de veículo (opcional)
     const tipoVeiculoIndex = headers.findIndex(h => 
@@ -142,153 +171,169 @@ if (!isMainThread) {
     );
     columnMapping.peso = pesoIndex;
 
-    // Processamento otimizado: reduzir delay entre lotes drasticamente
-    const results = [];
-    const errors = [];
-    const BATCH_SIZE = 5; // Lotes menores mas com delay menor
-    const BATCH_DELAY = 3000; // 3 segundos entre lotes (5 req em 3s = 100 req/min)
-    
-    console.log(`⚡ [PROCESSING] Iniciando processamento OTIMIZADO: lotes de ${BATCH_SIZE} com delay de ${BATCH_DELAY/1000}s`);
-    
-    for (let batchStart = 0; batchStart < dataRows.length; batchStart += BATCH_SIZE) {
-      const batchEnd = Math.min(batchStart + BATCH_SIZE, dataRows.length);
-      const batch = dataRows.slice(batchStart, batchEnd);
-      
-      console.log(`📦 [BATCH] Processando lote ${Math.floor(batchStart/BATCH_SIZE) + 1}: linhas ${batchStart + 1}-${batchEnd}`);
-      
-      const batchStartTime = Date.now();
-      
-      // Processar lote em paralelo
-      const batchPromises = batch.map(async (row, batchIndex) => {
-        const i = batchStart + batchIndex;
-        
-        try {
-          console.log(`🔍 [LINHA ${i + 1}] Processando...`);
-          
-          // Extrair dados da linha com base nas colunas disponíveis
-          const filialNome = columnMapping.filial_nome >= 0 ? row[columnMapping.filial_nome]?.toString().trim() : '';
-          const cidadeDestino = row[columnMapping.cidade_destino]?.toString().trim();
-          const ufDestino = columnMapping.uf_destino >= 0 ? row[columnMapping.uf_destino]?.toString().trim() : '';
-          const qtEixos = parseInt(row[columnMapping.eixos]) || 2;
-          const tipoVeiculo = columnMapping.tipo_veiculo >= 0 ? row[columnMapping.tipo_veiculo]?.toString().trim() : '';
-          const peso = columnMapping.peso >= 0 ? parseFloat(row[columnMapping.peso]?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
-          
-          // Tentar extrair valor do frete da planilha
-          let valorFreteCobrado = null;
-          if (columnMapping.valor_frete >= 0) {
-            const valorStr = row[columnMapping.valor_frete]?.toString().replace(/[^\d.,]/g, '').replace(',', '.');
-            valorFreteCobrado = parseFloat(valorStr) || null;
+    // Processamento otimizado (nova versão): concurrency pool adaptativo sem delay fixo
+        const results = [];
+        const errors = [];
+        const MAX_CONCURRENCY = options.concurrency || Number(process.env.CONCILIACAO_MAX_CONCURRENCY) || 6;
+        const PROGRESS_EVERY = options.progressEvery || Number(process.env.CONCILIACAO_PROGRESS_EVERY) || 1; // enviar progresso a cada N linhas
+        console.log(`⚡ [PROCESSING] Concurrency=${MAX_CONCURRENCY} progressEvery=${PROGRESS_EVERY}`);
+
+        // Runner de concorrência limitada
+        async function runLimited(tasks, limit) {
+          const executing = new Set();
+          const resultsArr = [];
+          for (const task of tasks) {
+            const p = Promise.resolve().then(task).then(r => {
+              executing.delete(p);
+              return r;
+            });
+            executing.add(p);
+            if (executing.size >= limit) {
+              await Promise.race(executing);
+            }
+            resultsArr.push(p);
           }
-
-          // Determinar origem baseada na filial
-          const origemInfo = filiaisOrigem[filialNome] || { cidade: "FRAIBURGO", uf: "SC" }; // Fallback para FRAIBURGO
-          const cidadeOrigem = origemInfo.cidade;
-          const ufOrigem = origemInfo.uf;
-          
-          console.log(`🗺️ [LINHA ${i + 1}] Rota: ${cidadeOrigem}/${ufOrigem} → ${cidadeDestino}/${ufDestino || 'N/A'}`);
-
-          // Validar dados obrigatórios
-          if (!cidadeDestino) {
-            throw new Error(`Linha ${i + 2}: Cidade destino é obrigatória`);
-          }
-
-          // Calcular distância real usando OpenRouteService
-          console.log(`⏳ [LINHA ${i + 1}] Calculando distância...`);
-          const routeStartTime = Date.now();
-          const routeResult = await calculateCityDistance(cidadeOrigem, ufOrigem, cidadeDestino, ufDestino);
-          const routeTime = Date.now() - routeStartTime;
-          
-          console.log(`✅ [LINHA ${i + 1}] Distância calculada em ${routeTime}ms: ${routeResult.km}km (${routeResult.method})`);
-          
-          // Log específico para métodos de fallback
-          if (routeResult.method !== 'ors_route') {
-            console.log(`⚠️ [LINHA ${i + 1}] ATENÇÃO: Usando método alternativo ${routeResult.method} - pode afetar precisão do cálculo`);
-          }
-          
-          const distanciaKm = routeResult.km;
-          const metodoCalculo = routeResult.method;
-          const origemLabel = routeResult.origem;
-          const destinoLabel = routeResult.destino;
-
-          // Mapear tipo de veículo para tipo de carga
-          const tipoCarga = mapearTipoCarga(tipoVeiculo, peso);
-
-          const dados = {
-            cidade_origem: cidadeOrigem,
-            cidade_destino: cidadeDestino,
-            uf_origem: ufOrigem,
-            uf_destino: ufDestino,
-            distancia_km: distanciaKm,
-            eixos: qtEixos,
-            tipo_carga: tipoCarga,
-            tipo_veiculo: tipoVeiculo,
-            peso_bruto: peso,
-            pedagio: 0,
-            retorno_vazio: 0,
-            filial: filialNome,
-            metodo_calculo: metodoCalculo,
-            origem_label: origemLabel,
-            destino_label: destinoLabel
-          };
-
-          // Calcular frete
-          const freteCalculado = calcularFrete(dados);
-          
-          return {
-            linha: i + 2,
-            ...dados,
-            ...freteCalculado,
-            valor_frete_cobrado: valorFreteCobrado,
-            status: 'sucesso'
-          };
-
-        } catch (error) {
-          return {
-            linha: i + 2,
-            erro: error.message,
-            dados: row,
-            status: 'erro'
-          };
+          return Promise.all(resultsArr);
         }
-      });
 
-      // Aguardar processamento do lote
-      const batchResults = await Promise.all(batchPromises);
-      const batchTime = Date.now() - batchStartTime;
-      
-      console.log(`⚡ [BATCH CONCLUÍDO] Lote processado em ${batchTime}ms (${batchTime/batch.length}ms por linha)`);
-      
-      // Processar resultados e análise de conformidade
-      for (const result of batchResults) {
-        if (result.status === 'sucesso') {
+        const allTasks = dataRows.map((row, idx) => async () => {
+          const i = idx;
+          try {
+            if ((i + 1) % PROGRESS_EVERY === 0) {
+              parentPort.postMessage({ type: 'progress', data: { step: 'processing', processed: i, total: dataRows.length, percentage: Math.round((i / dataRows.length) * 100), message: `Linha ${i + 1} em execução` } });
+            }
+            // Extrair dados
+            const filialNome = columnMapping.filial_nome >= 0 ? row[columnMapping.filial_nome]?.toString().trim() : '';
+            const cidadeDestino = row[columnMapping.cidade_destino]?.toString().trim();
+            const ufDestino = columnMapping.uf_destino >= 0 ? row[columnMapping.uf_destino]?.toString().trim() : '';
+            const qtEixos = parseInt(row[columnMapping.eixos]) || 2;
+            const tipoVeiculo = columnMapping.tipo_veiculo >= 0 ? row[columnMapping.tipo_veiculo]?.toString().trim() : '';
+            const peso = columnMapping.peso >= 0 ? parseFloat(row[columnMapping.peso]?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
+            let valorFreteCobrado = null;
+            if (columnMapping.valor_frete >= 0) {
+              const valorStr = row[columnMapping.valor_frete]?.toString().replace(/[^\d.,]/g, '').replace(',', '.');
+              valorFreteCobrado = parseFloat(valorStr) || null;
+            }
+            // Dados fiéis da planilha para lote, placa e transportadora
+            const loteRaw = columnMapping.lote >= 0 ? row[columnMapping.lote]?.toString().trim() : '';
+            const placaRaw = columnMapping.placa >= 0 ? row[columnMapping.placa]?.toString().trim() : '';
+            const transportadoraRaw = columnMapping.transportadora >= 0 ? row[columnMapping.transportadora]?.toString().trim() : '';
+            // Data de emissão (se disponível)
+            let dataEmissaoValor = null;
+            if (columnMapping.data_emissao >= 0) {
+              const rawDate = row[columnMapping.data_emissao];
+              if (rawDate !== undefined && rawDate !== null && rawDate !== '') {
+                if (typeof rawDate === 'number') {
+                  // Excel serial date
+                  const jsDate = new Date(Math.round((rawDate - 25569) * 86400 * 1000));
+                  if (!isNaN(jsDate.getTime())) dataEmissaoValor = jsDate.toISOString().slice(0, 10);
+                } else if (typeof rawDate === 'string') {
+                  const trimmed = rawDate.trim();
+                  // Try DD/MM/YYYY
+                  const dm = trimmed.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})$/);
+                  if (dm) {
+                    const [_, d, m, y] = dm;
+                    const year = y.length === 2 ? `20${y}` : y;
+                    const jsDate = new Date(parseInt(year), parseInt(m) - 1, parseInt(d));
+                    if (!isNaN(jsDate.getTime())) dataEmissaoValor = jsDate.toISOString().slice(0, 10);
+                  } else {
+                    const parsed = new Date(trimmed);
+                    if (!isNaN(parsed.getTime())) dataEmissaoValor = parsed.toISOString().slice(0, 10);
+                  }
+                }
+              }
+            }
+            if (!dataEmissaoValor) {
+              // Fallback: usar data atual (mantém comportamento anterior de placeholder)
+              dataEmissaoValor = new Date().toISOString().slice(0, 10);
+            }
+            const origemInfo = filiaisOrigem[filialNome] || { cidade: 'FRAIBURGO', uf: 'SC' };
+            const cidadeOrigem = origemInfo.cidade;
+            const ufOrigem = origemInfo.uf;
+            if (!cidadeDestino) {
+              throw new Error(`Linha ${i + 2}: Cidade destino é obrigatória`);
+            }
+            const routeStartTime = Date.now();
+            const routeResult = await calculateCityDistance(cidadeOrigem, ufOrigem, cidadeDestino, ufDestino);
+            const routeTime = Date.now() - routeStartTime;
+            if (routeTime > 8000) {
+              console.log(`🐢 [LINHA ${i + 1}] Rota lenta ${routeTime}ms (${cidadeOrigem}→${cidadeDestino})`);
+            }
+            const tipoCarga = mapearTipoCarga(tipoVeiculo, peso);
+            const dados = {
+              cidade_origem: cidadeOrigem,
+              cidade_destino: cidadeDestino,
+              uf_origem: ufOrigem,
+              uf_destino: ufDestino,
+              distancia_km: routeResult.km,
+              eixos: qtEixos,
+              tipo_carga: tipoCarga,
+              tipo_veiculo: tipoVeiculo,
+              peso_bruto: peso,
+              pedagio: 0,
+              retorno_vazio: 0,
+              filial: filialNome,
+              metodo_calculo: routeResult.method,
+              origem_label: routeResult.origem,
+              destino_label: routeResult.destino
+            };
+            const freteCalculado = calcularFrete(dados);
+            // Incluir data_emissao no objeto retornado para uso posterior
+            return { linha: i + 2, ...dados, lote_raw: loteRaw, placa_raw: placaRaw, transportadora_raw: transportadoraRaw, ...freteCalculado, data_emissao: dataEmissaoValor, valor_frete_cobrado: valorFreteCobrado, status: 'sucesso' };
+          } catch (error) {
+            return { linha: i + 2, erro: error.message, dados: row, status: 'erro' };
+          }
+        });
+
+        const batchStartTime = Date.now();
+        const batchResults = await runLimited(allTasks, MAX_CONCURRENCY);
+        const batchTime = Date.now() - batchStartTime;
+        console.log(`⚡ [PROCESSING DONE] ${batchResults.length} linhas em ${batchTime}ms (~${(batchTime / batchResults.length).toFixed(0)}ms/linha)`);
+
+        for (const result of batchResults) {
+          if (result.status === 'sucesso') {
           // Análise de conformidade
-          const valorFreteCobradoReal = result.valor_frete_cobrado || (result.valor_total * (0.8 + Math.random() * 0.4));
+          // Removida a aleatoriedade do frete simulado para garantir resultados determinísticos.
+          // Antes: valor_total * (0.8 + Math.random() * 0.4) => variava entre -20% e +20% do mínimo
+          const FRETE_SIMULADO_MULTIPLICADOR_PADRAO = 1.05; // 5% acima do mínimo ANTT como heurística conservadora
+          const valorFreteCobradoReal = result.valor_frete_cobrado ?? (result.valor_total * FRETE_SIMULADO_MULTIPLICADOR_PADRAO);
           const isSimulado = !result.valor_frete_cobrado;
+          if (isSimulado) {
+            console.log(`🧪 [SIMULACAO] Linha ${result.linha}: usando multiplicador padrão ${FRETE_SIMULADO_MULTIPLICADOR_PADRAO}`);
+          }
           
           // Calcular diferenças
           const diferençaValor = valorFreteCobradoReal - result.valor_total;
           const diferençaPercentual = ((diferençaValor / result.valor_total) * 100);
           
-          // Determinar status de conformidade
+          // Determinar status de conformidade (agora com motivoStatus granular)
           let status;
           let observacoes = [];
-          
-          // Regra crítica: Se o frete cobrado está abaixo do piso mínimo ANTT
+          let motivoStatus;
+
           if (valorFreteCobradoReal < result.valor_total) {
             status = 'ERRO_CALCULO';
-            observacoes.push('ALERTA: Frete cobrado está abaixo do piso mínimo ANTT - situação irregular');
+            motivoStatus = 'ABAIXO_PISO';
+            observacoes.push('ALERTA: Frete cobrado está ABAIXO do piso mínimo ANTT - situação irregular');
+          } else if (Math.abs(diferençaPercentual) <= 5) {
+            status = 'CONFORME';
+            motivoStatus = 'DENTRO_TOLERANCIA';
+          } else if (Math.abs(diferençaPercentual) <= 15) {
+            status = 'DIVERGENTE';
+            motivoStatus = 'VARIACAO_MEDIA';
+            observacoes.push('Variação moderada em relação ao mínimo - recomenda-se revisão');
           } else {
-            // Aplicar regras normais de variação percentual
-            if (Math.abs(diferençaPercentual) <= 5) {
-              status = 'CONFORME';
-            } else if (Math.abs(diferençaPercentual) <= 15) {
-              status = 'DIVERGENTE';
+            status = 'ERRO_CALCULO';
+            if (diferençaPercentual > 0) {
+              motivoStatus = 'SOBREPRECO';
+              observacoes.push('Frete cobrado muito acima do mínimo ANTT - possível sobrepreço');
             } else {
-              status = 'ERRO_CALCULO';
+              motivoStatus = 'VARIACAO_EXCESSIVA_NEGATIVA';
+              observacoes.push('Diferença negativa elevada - verificar parâmetros (peso, eixos, rota)');
             }
-          
-          console.log(`📊 [CONFORMIDADE] Linha ${result.linha}: ${status} (Diferença: ${diferençaPercentual.toFixed(1)}%)`);
-          
+          }
+
+          console.log(`📊 [CONFORMIDADE] Linha ${result.linha}: ${status} (${motivoStatus}) Diferença: ${diferençaPercentual.toFixed(1)}%`);
           // Log correlacionando método de cálculo com resultado de conformidade
           const metodoUsado = result.metodo_calculo;
           const isApiFailure = metodoUsado !== 'ors_route';
@@ -301,12 +346,6 @@ if (!isMainThread) {
           }
           
           if (isSimulado) {
-            observacoes.push('Valor do frete simulado (não encontrado na planilha)');
-          }
-          }
-          
-          // Adicionar observação sobre simulação se necessário
-          if (isSimulado) {
             observacoes.push('Valor do frete simulado - adicione coluna "Valor Frete" na planilha');
           }
 
@@ -315,15 +354,16 @@ if (!isMainThread) {
             item: {
               filial: result.filial?.substring(0, 2) || '01',
               filialNome: result.filial || 'URBANO MATRIZ',
-              dataEmissao: '2024-01-01',
+              // Usa data_emissao calculada na etapa anterior; fallback para hoje se ausente
+              dataEmissao: result.data_emissao || result.dataEmissao || new Date().toISOString().slice(0, 10),
               cfop: '5102',
               cidadeOrigem: result.cidade_origem,
               origemUF: result.uf_origem,
               cidadeDestino: result.cidade_destino,
               destinoUF: result.uf_destino,
-              lote: `L${result.linha}`,
-              placa: `ABC${String(result.linha).padStart(4, '0')}`,
-              transportadora: `Transportadora ${result.linha}`,
+              lote: result.lote_raw || `L${result.linha}`,
+              placa: result.placa_raw || `ABC${String(result.linha).padStart(4, '0')}`,
+              transportadora: result.transportadora_raw || `Transportadora ${result.linha}`,
               valorFrete: Number(valorFreteCobradoReal.toFixed(2)),
               pesoLiqCalc: result.peso_bruto * 0.9,
               pesoBruto: result.peso_bruto,
@@ -350,6 +390,7 @@ if (!isMainThread) {
               destinoLabel: result.destino_label
             },
             status,
+            motivoStatus,
             observacoes
           };
 
@@ -363,30 +404,15 @@ if (!isMainThread) {
         }
       }
 
-      // Enviar progresso a cada lote processado
-      const processed = batchStart + batch.length;
-      console.log(`📈 [PROGRESSO] ${processed}/${dataRows.length} linhas processadas (${Math.round((processed / dataRows.length) * 100)}%)`);
-      
-      parentPort.postMessage({
-        type: 'progress',
-        data: {
-          step: 'processing',
-          processed,
-          total: dataRows.length,
-          percentage: Math.round((processed / dataRows.length) * 100),
-          message: `Processado ${processed} de ${dataRows.length} linhas (lote ${Math.ceil((batchStart + 1) / BATCH_SIZE)})`
-        }
-      });
+    // (removido bloco de fechamento prematuro do try)
 
-      // Delay entre lotes para respeitar rate limit
-      if (batchStart + BATCH_SIZE < dataRows.length) {
-        console.log(`⏸️ [DELAY] Aguardando ${BATCH_DELAY/1000}s antes do próximo lote...`);
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
-      }
-    }
+    parentPort.postMessage({
+      type: 'progress',
+      data: { step: 'processing', processed: dataRows.length, total: dataRows.length, percentage: 100, message: 'Processamento concluído' }
+    });
 
     const totalTime = Date.now() - startTime;
-    console.log(`🏁 [FINALIZADO] Processamento completo em ${totalTime}ms (${(totalTime/dataRows.length).toFixed(0)}ms por linha)`);
+    console.log(`🏁 [FINALIZADO] Processamento completo em ${totalTime}ms (${(totalTime / dataRows.length).toFixed(0)}ms por linha)`);
 
     // Calcular estatísticas finais
     const conforme = results.filter(r => r.status === 'CONFORME').length;

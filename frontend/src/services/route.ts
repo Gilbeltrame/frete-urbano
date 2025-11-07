@@ -71,7 +71,28 @@ export const routeService = {
 		return { lat, lon, label };
 	},
 
-	async calculateRoute(start: Coordinates, end: Coordinates): Promise<{ km: number; durMin: number }> {
+	// Fallback adicional usando Nominatim para tentar capturar melhor o bairro
+	async geocodeNominatim(query: string): Promise<Coordinates | null> {
+		try {
+			const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+			const response = await fetch(url, {
+				headers: { "Accept-Language": "pt-BR", "User-Agent": "frete-urbano-app/1.0" },
+			});
+			if (!response.ok) return null;
+			const data = await response.json();
+			const first = data?.[0];
+			if (!first) return null;
+			return {
+				lat: parseFloat(first.lat),
+				lon: parseFloat(first.lon),
+				label: first.display_name || query,
+			};
+		} catch {
+			return null;
+		}
+	},
+
+	async calculateRoute(start: Coordinates, end: Coordinates): Promise<{ km: number; durMin: number; geometry?: { lat: number; lon: number }[] }> {
 		if (!ORS_API_KEY) throw new ApiError("Defina VITE_ORS_API_KEY");
 
 		const url = `${ORS_BASE}/v2/directions/driving-car?api_key=${encodeURIComponent(ORS_API_KEY)}&start=${start.lon},${start.lat}&end=${end.lon},${end.lat}`;
@@ -105,10 +126,19 @@ export const routeService = {
 		const km = (summary.distance / 1000) as number;
 		const durMin = Math.round((summary.duration / 60) as number);
 
-		return { km, durMin };
+		// Extrair geometria detalhada (lista de coordenadas [lon, lat])
+		let geometry: { lat: number; lon: number }[] | undefined;
+		try {
+			const coords: [number, number][] = data?.features?.[0]?.geometry?.coordinates || [];
+			if (Array.isArray(coords) && coords.length > 1) {
+				geometry = coords.map(([lon, lat]) => ({ lon, lat }));
+			}
+		} catch {}
+
+		return { km, durMin, geometry };
 	},
 
-	async geocodeFromMode(mode: "cep" | "cidade", cep: string, cidade: string): Promise<Coordinates> {
+	async geocodeFromMode(mode: "cep" | "cidade", cep: string, cidade: string, numero?: string): Promise<Coordinates> {
 		if (mode === "cep") {
 			// Limpar CEP removendo hífen e outros caracteres
 			const cleanedCEP = cleanCEP(cep);
@@ -118,25 +148,48 @@ export const routeService = {
 				// Montar endereço mais específico possível
 				const addressParts = [];
 				if (viaCepData.logradouro) addressParts.push(viaCepData.logradouro);
+				if (numero?.trim()) addressParts.push(numero.trim());
 				if (viaCepData.bairro) addressParts.push(viaCepData.bairro);
 				addressParts.push(`${viaCepData.localidade}, ${viaCepData.uf}`);
 
 				const fullAddress = addressParts.join(", ");
 
 				try {
-					return await this.geocodeMultiSource(fullAddress);
+					const coord = await this.geocodeMultiSource(fullAddress);
+					const expectedBairro = viaCepData.bairro?.trim();
+					if (expectedBairro && coord.label && !coord.label.toLowerCase().includes(expectedBairro.toLowerCase())) {
+						// Tenta ORS só com bairro
+						try {
+							const bairroAddress = `${expectedBairro}, ${viaCepData.localidade}, ${viaCepData.uf}`;
+							let retry = await this.geocodeMultiSource(bairroAddress);
+							if (retry.label && !retry.label.toLowerCase().includes(expectedBairro.toLowerCase())) {
+								// Tenta Nominatim como fallback final
+								const nominatim = await this.geocodeNominatim(bairroAddress);
+								if (nominatim) retry = nominatim;
+							}
+							return { ...retry, bairro: expectedBairro };
+						} catch {
+							const bairroAddress = `${expectedBairro}, ${viaCepData.localidade}, ${viaCepData.uf}`;
+							const nominatim = await this.geocodeNominatim(bairroAddress);
+							if (nominatim) return { ...nominatim, bairro: expectedBairro };
+							return { ...coord, bairro: expectedBairro }; // mantém coord original
+						}
+					}
+					return { ...coord, bairro: expectedBairro };
 				} catch (error) {
 					// Se falhar com endereço completo, tenta só com cidade
 					console.warn("Geocoding com endereço completo falhou, tentando só com cidade:", error);
 					const cityOnly = `${viaCepData.localidade}, ${viaCepData.uf}`;
-					return await this.geocodeMultiSource(cityOnly);
+					const coordCity = await this.geocodeMultiSource(cityOnly);
+					return { ...coordCity, bairro: viaCepData.bairro?.trim() };
 				}
 			} catch {
 				// fallback: tenta geocodificar o CEP limpo diretamente
 				try {
 					// Formatar CEP com hífen para as APIs de geocoding
 					const formattedCEP = cleanedCEP.replace(/(\d{5})(\d{3})/, "$1-$2");
-					return await this.geocodeMultiSource(`CEP ${formattedCEP}, Brasil`);
+					const coord = await this.geocodeMultiSource(`CEP ${formattedCEP}, Brasil`);
+					return coord;
 				} catch (error) {
 					throw new ApiError(`Não foi possível localizar o CEP ${cep}. Verifique se está correto.`);
 				}
@@ -156,7 +209,9 @@ export const routeService = {
 		origemCidade: string,
 		destinoMode: "cep" | "cidade",
 		destinoCep: string,
-		destinoCidade: string
+		destinoCidade: string,
+		origemNumero?: string,
+		destinoNumero?: string
 	): Promise<RouteInfo> {
 		const origemTxt = this.buildLocationText(origemMode, origemCep, origemCidade);
 		const destinoTxt = this.buildLocationText(destinoMode, destinoCep, destinoCidade);
@@ -165,8 +220,8 @@ export const routeService = {
 			throw new ApiError("Informe origem e destino (CEP ou Cidade/UF)");
 		}
 
-		const origem = await this.geocodeFromMode(origemMode, origemCep, origemCidade);
-		const destino = await this.geocodeFromMode(destinoMode, destinoCep, destinoCidade);
+		const origem = await this.geocodeFromMode(origemMode, origemCep, origemCidade, origemNumero);
+		const destino = await this.geocodeFromMode(destinoMode, destinoCep, destinoCidade, destinoNumero);
 
 		// Verificar se as coordenadas são diferentes
 		const coordsAreSame = Math.abs(origem.lat - destino.lat) < 0.001 && Math.abs(origem.lon - destino.lon) < 0.001;
@@ -176,13 +231,20 @@ export const routeService = {
 		}
 
 		try {
-			const { km, durMin } = await this.calculateRoute(origem, destino);
+			const { km, durMin, geometry } = await this.calculateRoute(origem, destino);
 			return {
 				km,
 				durMin,
 				origem: origem.label,
 				destino: destino.label,
 				isEstimate: false,
+				geometry,
+				origemCoords: { lat: origem.lat, lon: origem.lon },
+				destinoCoords: { lat: destino.lat, lon: destino.lon },
+				origemBairro: origem.bairro,
+				destinoBairro: destino.bairro,
+				bairroMismatchOrigem: origem.bairro ? !origem.label.toLowerCase().includes(origem.bairro.toLowerCase()) : false,
+				bairroMismatchDestino: destino.bairro ? !destino.label.toLowerCase().includes(destino.bairro.toLowerCase()) : false,
 			};
 		} catch (error: any) {
 			// Se falhar ao calcular rota, usa distância estimada como fallback
@@ -199,6 +261,16 @@ export const routeService = {
 				origem: origem.label,
 				destino: destino.label,
 				isEstimate: true,
+				geometry: [
+					{ lat: origem.lat, lon: origem.lon },
+					{ lat: destino.lat, lon: destino.lon },
+				],
+				origemCoords: { lat: origem.lat, lon: origem.lon },
+				destinoCoords: { lat: destino.lat, lon: destino.lon },
+				origemBairro: origem.bairro,
+				destinoBairro: destino.bairro,
+				bairroMismatchOrigem: origem.bairro ? !origem.label.toLowerCase().includes(origem.bairro.toLowerCase()) : false,
+				bairroMismatchDestino: destino.bairro ? !destino.label.toLowerCase().includes(destino.bairro.toLowerCase()) : false,
 			};
 		}
 	},

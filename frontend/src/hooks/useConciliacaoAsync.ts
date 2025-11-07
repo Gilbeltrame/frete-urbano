@@ -148,6 +148,55 @@ export function useConciliacaoAsync() {
 		});
 	}, []);
 
+	// -------------------------
+	// Persistência em localStorage
+	// -------------------------
+	const PERSIST_KEY = "conciliacaoAsyncState";
+
+	// Restaurar estado salvo ao montar
+	useEffect(() => {
+		try {
+			const raw = localStorage.getItem(PERSIST_KEY);
+			if (!raw) return;
+			const saved = JSON.parse(raw);
+			if (saved.currentJobId) setCurrentJobId(saved.currentJobId);
+			if (saved.jobStatus) setJobStatus(saved.jobStatus);
+			if (saved.resultado) setResultado(saved.resultado);
+			if (Array.isArray(saved.resultadoConciliacao)) setResultadoConciliacao(saved.resultadoConciliacao);
+			if (saved.startTime) setStartTime(saved.startTime);
+
+			// Se o job estava em andamento, retomar monitoramento
+			const status = saved.jobStatus?.status;
+			if (saved.currentJobId && (status === "running" || status === "queued")) {
+				addLog("info", "Retomando monitoramento de job em andamento", "PERSIST", { jobId: saved.currentJobId });
+				startMonitoring(saved.currentJobId); // tentará SSE e cairá para polling se necessário
+			} else if (saved.currentJobId && status === "completed" && !saved.resultado) {
+				// Se completado mas resultado não persistido corretamente, busca novamente
+				addLog("warn", "Job completo sem resultado persistido. Rebuscando...", "PERSIST", { jobId: saved.currentJobId });
+				fetchResult(saved.currentJobId);
+			}
+		} catch (e) {
+			addLog("warn", "Falha ao restaurar estado persistido", "PERSIST", { error: e.message });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	// Salvar estado sempre que algo relevante mudar
+	useEffect(() => {
+		try {
+			const dataToPersist = {
+				currentJobId,
+				jobStatus,
+				resultado,
+				resultadoConciliacao,
+				startTime,
+			};
+			localStorage.setItem(PERSIST_KEY, JSON.stringify(dataToPersist));
+		} catch (e) {
+			addLog("warn", "Falha ao persistir estado", "PERSIST", { error: e.message });
+		}
+	}, [currentJobId, jobStatus, resultado, resultadoConciliacao, startTime, addLog]);
+
 	// Upload do arquivo e início do processamento
 	const uploadArquivo = useCallback(
 		async (file: File) => {
@@ -384,6 +433,11 @@ export function useConciliacaoAsync() {
 		setJobStatus(null);
 		setResultado(null);
 		setResultadoConciliacao([]);
+		setStartTime(null);
+		try {
+			localStorage.removeItem(PERSIST_KEY);
+			addLog("debug", "Estado persistido removido", "PERSIST");
+		} catch {}
 
 		// Parar monitoramento
 		if (eventSourceRef.current) {
@@ -507,5 +561,7 @@ export function useConciliacaoAsync() {
 		exportarResultados,
 		clearLogs,
 		exportLogs,
+		// Expor chave de persistência para possíveis diagnósticos externos
+		_persistKey: PERSIST_KEY,
 	};
 }

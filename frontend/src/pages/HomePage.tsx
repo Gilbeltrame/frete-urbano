@@ -2,7 +2,7 @@ import UlogIcon from "@/components/UlogIcon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfiguracao } from "@/contexts/ConfiguracaoContext";
-import { BarChart3, Calculator, Clock, DollarSign, Route, Shield, Star, Users, Zap } from "lucide-react";
+import { Calculator, Clock, DollarSign, Route, Shield, Zap } from "lucide-react";
 
 export default function HomePage() {
 	const { configuracao } = useConfiguracao();
@@ -125,34 +125,6 @@ export default function HomePage() {
 						<p className='text-muted-foreground'>Ferramenta completamente gratuita para transportadores e empresas de logística</p>
 					</CardContent>
 				</Card>
-			</div>
-
-			{/* Statistics */}
-			<div className='bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-8'>
-				<h2 className='text-2xl font-bold text-center mb-8'>Por que usar o sistema ULog?</h2>
-				<div className='grid md:grid-cols-3 gap-8 text-center'>
-					<div className='space-y-2'>
-						<div className='flex justify-center'>
-							<BarChart3 className='h-8 w-8 text-primary' />
-						</div>
-						<h3 className='text-3xl font-bold text-primary'>99.9%</h3>
-						<p className='text-muted-foreground'>Precisão nos cálculos</p>
-					</div>
-					<div className='space-y-2'>
-						<div className='flex justify-center'>
-							<Users className='h-8 w-8 text-primary' />
-						</div>
-						<h3 className='text-3xl font-bold text-primary'>10k+</h3>
-						<p className='text-muted-foreground'>Cálculos realizados</p>
-					</div>
-					<div className='space-y-2'>
-						<div className='flex justify-center'>
-							<Star className='h-8 w-8 text-primary' />
-						</div>
-						<h3 className='text-3xl font-bold text-primary'>4.9/5</h3>
-						<p className='text-muted-foreground'>Avaliação dos usuários</p>
-					</div>
-				</div>
 			</div>
 
 			{/* CTA Section */}

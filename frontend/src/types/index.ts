@@ -14,6 +14,7 @@ export interface Coordinates {
 	lat: number;
 	lon: number;
 	label: string;
+	bairro?: string; // bairro esperado (quando origem via CEP)
 }
 
 export interface RouteInfo {
@@ -22,6 +23,13 @@ export interface RouteInfo {
 	origem: string;
 	destino: string;
 	isEstimate?: boolean; // Indica se é uma estimativa (distância em linha reta)
+	geometry?: { lat: number; lon: number }[]; // Geometria detalhada da rota (se disponível)
+	origemCoords?: { lat: number; lon: number };
+	destinoCoords?: { lat: number; lon: number };
+	origemBairro?: string;
+	destinoBairro?: string;
+	bairroMismatchOrigem?: boolean;
+	bairroMismatchDestino?: boolean;
 }
 
 export interface FreteCalculationRequest {

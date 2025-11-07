@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BRAZILIAN_CITIES } from "@/data/cities";
+import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -25,26 +26,36 @@ export function CityCombobox({ value, onValueChange, placeholder = "Selecione um
 
 	return (
 		<Select value={value} onValueChange={onValueChange}>
-			<SelectTrigger className={className}>
+			<SelectTrigger className={cn("group relative", className)}>
+				<div className='absolute inset-0 rounded-md bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none' />
 				<SelectValue placeholder={placeholder} />
 			</SelectTrigger>
-			<SelectContent className='max-h-[300px]'>
-				<div className='flex items-center border-b px-3 pb-2 mb-2'>
-					<Search className='mr-2 h-4 w-4 shrink-0 opacity-50' />
+			<SelectContent className='max-h-[340px] p-0 overflow-hidden rounded-lg shadow-lg border bg-background/95 backdrop-blur-sm'>
+				{/* Sticky search header */}
+				<div className='sticky top-0 z-10 flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm border-b shadow-sm'>
+					<div className='flex items-center justify-center h-7 w-7 rounded-md bg-muted text-muted-foreground'>
+						<Search className='h-4 w-4' />
+					</div>
 					<Input
 						placeholder='Buscar cidade...'
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
-						className='border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-8'
+						className='h-8 text-sm focus-visible:ring-1 focus-visible:ring-primary/40'
 					/>
 				</div>
-				{filteredCities.length === 0 && searchTerm && <div className='py-6 text-center text-sm text-muted-foreground'>Nenhuma cidade encontrada.</div>}
-				{filteredCities.map((city) => (
-					<SelectItem key={city.value} value={city.value}>
-						{city.label}
-					</SelectItem>
-				))}
-				{!searchTerm && BRAZILIAN_CITIES.length > 50 && <div className='py-2 text-center text-xs text-muted-foreground'>Digite para ver mais cidades...</div>}
+				{/* Body */}
+				<div className='px-1 py-1'>
+					{filteredCities.length === 0 && searchTerm && <div className='py-8 text-center text-sm text-muted-foreground'>Nenhuma cidade encontrada.</div>}
+					{filteredCities.map((city) => (
+						<SelectItem key={city.value} value={city.value} className='text-sm rounded-md data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary transition-colors'>
+							<span className='flex items-center gap-2'>
+								<span className='w-1.5 h-1.5 rounded-full bg-muted group-data-[state=checked]:bg-primary/70 transition-colors' />
+								{city.label}
+							</span>
+						</SelectItem>
+					))}
+					{!searchTerm && BRAZILIAN_CITIES.length > 50 && <div className='py-3 text-center text-xs text-muted-foreground'>Digite para ver mais cidades...</div>}
+				</div>
 			</SelectContent>
 		</Select>
 	);

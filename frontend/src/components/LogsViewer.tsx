@@ -2,8 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type { LogEntry, LogLevel } from "@/utils/logger";
-import { AlertCircle, AlertTriangle, Bug, ChevronLeft, ChevronRight, Download, Info, RefreshCw, Trash2, Zap } from "lucide-react";
+import { AlertCircle, AlertTriangle, Bug, ChevronLeft, ChevronRight, Download, Info, Maximize2, Minimize2, RefreshCw, Trash2, Zap } from "lucide-react";
 import { memo, startTransition, useCallback, useMemo, useState } from "react";
 
 interface LogsViewerProps {
@@ -110,6 +111,7 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 	const [selectedContext, setSelectedContext] = useState<string>("all");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [isFiltering, setIsFiltering] = useState(false);
+	const [dense, setDense] = useState(false);
 
 	const ITEMS_PER_PAGE = 50;
 
@@ -168,59 +170,64 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 	}, []);
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className='flex items-center gap-2'>
-					<Bug className='h-5 w-5' />
-					Logs de Diagnóstico
+		<Card className='relative overflow-hidden border-muted/40 bg-gradient-to-br from-background via-background to-muted/30 backdrop-blur-xl'>
+			<div className='absolute inset-0 pointer-events-none [mask-image:radial-gradient(circle_at_30%_20%,white,transparent)] bg-[linear-gradient(110deg,rgba(255,255,255,0.08)_15%,transparent_55%)]' />
+			<CardHeader className='space-y-1 pb-3'>
+				<CardTitle className='flex items-center gap-2 text-sm font-semibold tracking-tight'>
+					<Bug className='h-4 w-4 text-muted-foreground' />
+					<span className='text-foreground/90'>Logs de Diagnóstico</span>
 					{logs.hasErrors && (
-						<Badge variant='destructive' className='ml-2'>
+						<Badge variant='destructive' className='ml-2 animate-in fade-in'>
 							{logs.stats.error + logs.stats.critical} erros
 						</Badge>
 					)}
 					{logs.hasWarnings && (
-						<Badge variant='secondary' className='bg-yellow-100 text-yellow-600'>
+						<Badge variant='secondary' className='bg-amber-400/15 text-amber-600 border border-amber-500/20 ml-2'>
 							{logs.stats.warn} avisos
 						</Badge>
 					)}
 					{isFiltering && (
-						<Badge variant='outline' className='animate-pulse'>
+						<Badge variant='outline' className='ml-2 animate-pulse'>
 							Filtrando...
 						</Badge>
 					)}
+					<Button variant='ghost' size='sm' className='ml-auto h-7 px-2 text-xs' onClick={() => setDense((d) => !d)}>
+						{dense ? <Maximize2 className='h-3.5 w-3.5' /> : <Minimize2 className='h-3.5 w-3.5' />}
+						{dense ? "Expandir" : "Compactar"}
+					</Button>
 				</CardTitle>
 			</CardHeader>
-			<CardContent>
+			<CardContent className='pt-0'>
 				<div className='space-y-4'>
 					{/* Estatísticas */}
-					<div className='flex flex-wrap gap-2'>
-						<Badge variant='outline' className='bg-gray-50'>
+					<div className='flex flex-wrap gap-2 text-[11px]'>
+						<Badge variant='outline' className='bg-muted/40'>
 							Debug: {logs.stats.debug}
 						</Badge>
-						<Badge variant='outline' className='bg-blue-50 text-blue-600'>
+						<Badge variant='outline' className='bg-blue-500/10 text-blue-600 border-blue-500/20'>
 							Info: {logs.stats.info}
 						</Badge>
-						<Badge variant='outline' className='bg-yellow-50 text-yellow-600'>
+						<Badge variant='outline' className='bg-amber-400/15 text-amber-600 border-amber-500/30'>
 							Warn: {logs.stats.warn}
 						</Badge>
-						<Badge variant='outline' className='bg-red-50 text-red-600'>
+						<Badge variant='outline' className='bg-red-500/10 text-red-600 border-red-500/30'>
 							Error: {logs.stats.error}
 						</Badge>
 						{logs.stats.critical > 0 && (
-							<Badge variant='outline' className='bg-red-100 text-red-700 font-bold'>
+							<Badge variant='outline' className='bg-red-600/15 text-red-700 border-red-600/40 font-semibold'>
 								Critical: {logs.stats.critical}
 							</Badge>
 						)}
 					</div>
 
 					{/* Filtros */}
-					<div className='flex flex-col sm:flex-row gap-4 items-center'>
-						<div className='flex-1'>
-							<label className='text-sm font-medium mb-1 block'>Nível:</label>
+					<div className='flex flex-col sm:flex-row gap-4 items-start sm:items-center'>
+						<div className='flex-1 w-full'>
+							<label className='text-xs font-medium mb-1 block'>Nível</label>
 							<select
 								value={selectedLevel}
 								onChange={(e) => handleLevelChange(e.target.value)}
-								className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm'
+								className='flex h-8 w-full rounded-md border border-muted bg-background/70 backdrop-blur-sm px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40'
 								disabled={isFiltering}
 							>
 								<option value='all'>Todos ({logs.entries.length})</option>
@@ -231,12 +238,12 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 								<option value='critical'>Críticos ({logs.stats.critical})</option>
 							</select>
 						</div>
-						<div className='flex-1'>
-							<label className='text-sm font-medium mb-1 block'>Contexto:</label>
+						<div className='flex-1 w-full'>
+							<label className='text-xs font-medium mb-1 block'>Contexto</label>
 							<select
 								value={selectedContext}
 								onChange={(e) => handleContextChange(e.target.value)}
-								className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm'
+								className='flex h-8 w-full rounded-md border border-muted bg-background/70 backdrop-blur-sm px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40'
 								disabled={isFiltering}
 							>
 								<option value='all'>Todos</option>
@@ -247,12 +254,12 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 								))}
 							</select>
 						</div>
-						<div className='pt-6 flex gap-2'>
-							<Button onClick={onExportLogs} variant='outline' size='sm' className='gap-2'>
+						<div className='flex gap-2 pt-1'>
+							<Button onClick={onExportLogs} variant='outline' size='sm' className='gap-1 h-8 px-2 text-xs'>
 								<Download size={14} />
 								Exportar
 							</Button>
-							<Button onClick={onClearLogs} variant='outline' size='sm' className='gap-2'>
+							<Button onClick={onClearLogs} variant='outline' size='sm' className='gap-1 h-8 px-2 text-xs'>
 								<Trash2 size={14} />
 								Limpar
 							</Button>
@@ -260,19 +267,19 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 					</div>
 
 					{/* Lista de Logs com Paginação */}
-					<div className='border rounded-md'>
-						<div className='h-96 overflow-y-auto p-4'>
+					<div className='border rounded-md bg-muted/20 backdrop-blur-sm'>
+						<div className={cn("overflow-y-auto", dense ? "h-72" : "h-96", "p-3")}>
 							{paginatedLogs.length === 0 ? (
-								<div className='text-center text-muted-foreground py-8'>
+								<div className='text-center text-muted-foreground py-12'>
 									<RefreshCw className='h-8 w-8 mx-auto mb-2 opacity-50' />
 									<p>{isFiltering ? "Filtrando logs..." : "Nenhum log encontrado com os filtros selecionados"}</p>
 								</div>
 							) : (
-								<div className='space-y-3'>
+								<div className={cn("space-y-3", dense && "space-y-2")}>
 									{paginatedLogs.map((log, index) => (
-										<div key={`${log.timestamp}-${index}`}>
+										<div key={`${log.timestamp}-${index}`} className='animate-in fade-in duration-200'>
 											<LogEntryComponent log={log} />
-											{index < paginatedLogs.length - 1 && <Separator className='my-3' />}
+											{index < paginatedLogs.length - 1 && <Separator className={cn("my-3", dense && "my-2")} />}
 										</div>
 									))}
 								</div>
@@ -281,19 +288,19 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 
 						{/* Paginação */}
 						{totalPages > 1 && (
-							<div className='flex items-center justify-between p-4 border-t'>
-								<div className='text-sm text-muted-foreground'>
+							<div className='flex items-center justify-between p-3 border-t bg-background/60 backdrop-blur-sm text-xs'>
+								<div className='text-muted-foreground'>
 									Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredLogs.length)} de {filteredLogs.length} logs
 								</div>
 								<div className='flex items-center space-x-2'>
-									<Button variant='outline' size='sm' onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
-										<ChevronLeft className='h-4 w-4' />
+									<Button variant='outline' size='sm' onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className='h-7 px-2'>
+										<ChevronLeft className='h-3.5 w-3.5' />
 									</Button>
-									<span className='text-sm'>
+									<span className='text-muted-foreground'>
 										Página {currentPage} de {totalPages}
 									</span>
-									<Button variant='outline' size='sm' onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>
-										<ChevronRight className='h-4 w-4' />
+									<Button variant='outline' size='sm' onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className='h-7 px-2'>
+										<ChevronRight className='h-3.5 w-3.5' />
 									</Button>
 								</div>
 							</div>
@@ -301,7 +308,7 @@ export const LogsViewer = memo(function LogsViewer({ logs, onClearLogs, onExport
 					</div>
 
 					{/* Resumo */}
-					<div className='text-xs text-muted-foreground flex justify-between'>
+					<div className='text-[10px] text-muted-foreground flex justify-between pt-1'>
 						<span>{filteredLogs.length !== logs.entries.length ? `Filtrados: ${filteredLogs.length} de ${logs.entries.length} logs` : `Total: ${logs.entries.length} logs`}</span>
 						<span>Última atualização: {logs.entries.length > 0 ? formatTimestamp(logs.entries[logs.entries.length - 1].timestamp) : "N/A"}</span>
 					</div>

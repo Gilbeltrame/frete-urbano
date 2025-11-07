@@ -16,7 +16,7 @@ import {
 	SidebarRail,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { ChevronRight, ExternalLink, FileSpreadsheet, FileText, Github, Home, Info, Package } from "lucide-react";
+import { ChevronRight, FileSpreadsheet, FileText, Home, Info, Package } from "lucide-react";
 import React from "react";
 
 interface AppLayoutProps {
@@ -100,7 +100,7 @@ export default function AppLayout({ children, currentPage, onNavigate, configura
 							</SidebarGroupContent>
 						</SidebarGroup>
 
-						<SidebarGroup className='mt-auto'>
+						{/* 	<SidebarGroup className='mt-auto'>
 							<SidebarGroupLabel>Links Externos</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu>
@@ -115,7 +115,7 @@ export default function AppLayout({ children, currentPage, onNavigate, configura
 									</SidebarMenuItem>
 								</SidebarMenu>
 							</SidebarGroupContent>
-						</SidebarGroup>
+						</SidebarGroup> */}
 					</SidebarContent>
 
 					<SidebarFooter className='border-t p-4'>

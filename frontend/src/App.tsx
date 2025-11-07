@@ -3,7 +3,7 @@ import { ConfiguracaoProvider } from "@/contexts/ConfiguracaoContext";
 import AppLayout from "@/layouts/AppLayout";
 import CalculadoraPage from "@/pages/CalculadoraPage";
 import ConciliacaoAsyncPage from "@/pages/ConciliacaoAsyncPage";
-import DocumentacaoPage from "@/pages/DocumentacaoPage";
+import DocPage from "@/pages/DocPage";
 import HomePage from "@/pages/HomePage";
 import SobrePage from "@/pages/SobrePage";
 import { useState } from "react";
@@ -27,7 +27,7 @@ export default function App() {
 			case "sobre":
 				return <SobrePage />;
 			case "documentacao":
-				return <DocumentacaoPage />;
+				return <DocPage />;
 			default:
 				return <HomePage />;
 		}

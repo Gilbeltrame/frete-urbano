@@ -20,19 +20,19 @@ interface ConfiguracoesModalProps {
 const tabelasInfo = {
 	A: {
 		nome: "Tabela A",
-		descricao: "Carga lotação - Veículo completamente ocupado",
+		descricao: "",
 		badge: "Padrão",
 	},
 	B: {
 		nome: "Tabela B",
-		descricao: "Carga fracionada - Ocupação parcial do veículo",
+		descricao: "",
 		badge: "Fracionada",
 	},
-	C: {
+	/* C: {
 		nome: "Tabela C",
 		descricao: "Cargas especiais - Condições específicas",
 		badge: "Especial",
-	},
+	}, */
 } as const;
 
 const tiposCarga = {
@@ -99,117 +99,119 @@ export default function ConfiguracoesModal({ configuracao, onConfigurationChange
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger asChild>
-				<Button variant='outline' size='lg' className='flex items-center gap-2'>
+				<Button variant='outline' size='lg' className='flex items-center gap-2 rounded-xl backdrop-blur-sm hover:bg-muted/40'>
 					<Settings className='h-4 w-4' />
 					<span className='hidden sm:inline'>Configurações</span>
 				</Button>
 			</DialogTrigger>
-			<DialogContent className='sm:max-w-[600px]'>
-				<DialogHeader className='text-left'>
-					<DialogTitle className='flex items-center gap-2 text-left'>
-						<Settings className='h-5 w-5' />
+			<DialogContent className='sm:max-w-[640px] rounded-2xl border-muted/40 bg-gradient-to-br from-background via-background to-muted/30 backdrop-blur-xl shadow-lg'>
+				<DialogHeader className='text-left pb-2'>
+					<DialogTitle className='flex items-center gap-2 text-left text-lg font-semibold tracking-tight'>
+						<Settings className='h-5 w-5 text-muted-foreground' />
 						Configurações do Sistema
 					</DialogTitle>
-					<DialogDescription className='text-left'>Configure a tabela ANTT, tipo de carga e modalidade de transporte para cálculos precisos</DialogDescription>
+					<DialogDescription className='text-left text-sm text-muted-foreground'>
+						Ajuste tabela ANTT, tipo de carga e modalidade de transporte para cálculos precisos e contexto regulatório.
+					</DialogDescription>
 				</DialogHeader>
 
-				<div className='space-y-6 py-4'>
+				<div className='space-y-8 py-4'>
 					{/* Seleção de Tabela */}
-					<div className='space-y-3 text-left'>
-						<Label className='text-base font-semibold text-left'>Tabela ANTT</Label>
+					<div className='space-y-3'>
+						<Label className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Tabela ANTT</Label>
 						<Select value={localConfig.tabela} onValueChange={(value) => setLocalConfig({ ...localConfig, tabela: value as "A" | "B" | "C" })}>
-							<SelectTrigger className='w-full text-left'>
+							<SelectTrigger className='w-full rounded-md bg-background/70 backdrop-blur-sm border-muted focus:ring-1 focus:ring-primary/40'>
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent className='rounded-md backdrop-blur-sm'>
 								{Object.entries(tabelasInfo).map(([key, info]) => (
-									<SelectItem key={key} value={key}>
-										<div className='flex items-center justify-between w-full text-left'>
-											<div className='text-left'>
+									<SelectItem key={key} value={key} className='text-sm data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary'>
+										<div className='flex items-center justify-between w-full'>
+											<div>
 												<span className='font-medium'>{info.nome}</span>
-												<p className='text-xs text-muted-foreground text-left'>{info.descricao}</p>
+												{info.descricao && <p className='text-xs text-muted-foreground'>{info.descricao}</p>}
 											</div>
 										</div>
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
-						<div className='flex items-center gap-2 text-left'>
-							<Badge variant='secondary' className='bg-primary/10 text-primary border-primary/20'>
+						<div className='flex items-center gap-2'>
+							<Badge variant='secondary' className='bg-primary/10 text-primary border-primary/20 rounded-md'>
 								{tabelaAtual.badge}
 							</Badge>
-							<span className='text-sm text-muted-foreground text-left'>{tabelaAtual.descricao}</span>
+							{tabelaAtual.descricao && <span className='text-xs text-muted-foreground'>{tabelaAtual.descricao}</span>}
 						</div>
 					</div>
 
 					{/* Tipo de Carga */}
-					<div className='space-y-3 text-left'>
-						<Label className='text-base font-semibold text-left'>Tipo de Carga</Label>
+					<div className='space-y-3'>
+						<Label className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Tipo de Carga</Label>
 						<Select value={localConfig.tipoCarga} onValueChange={(value) => setLocalConfig({ ...localConfig, tipoCarga: value as any })}>
-							<SelectTrigger className='w-full text-left'>
+							<SelectTrigger className='w-full rounded-md bg-background/70 backdrop-blur-sm border-muted focus:ring-1 focus:ring-primary/40 text-left'>
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent className='rounded-md backdrop-blur-sm'>
 								{Object.entries(tiposCarga).map(([key, info]) => (
-									<SelectItem key={key} value={key}>
-										<div className='text-left'>
+									<SelectItem key={key} value={key} className='text-sm data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary'>
+										<div>
 											<span className='font-medium'>{info.nome}</span>
-											<p className='text-xs text-muted-foreground text-left'>{info.descricao}</p>
+											<p className='text-xs text-muted-foreground'>{info.descricao}</p>
 										</div>
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
-						<div className='text-sm text-muted-foreground text-left'>{cargaAtual.descricao}</div>
+						<div className='text-xs text-muted-foreground'>{cargaAtual.descricao}</div>
 					</div>
 
 					{/* Modalidade */}
-					<div className='space-y-3 text-left'>
-						<Label className='text-base font-semibold text-left'>Modalidade de Transporte</Label>
+					<div className='space-y-3'>
+						<Label className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Modalidade de Transporte</Label>
 						<Select value={localConfig.modalidade} onValueChange={(value) => setLocalConfig({ ...localConfig, modalidade: value as "lotacao" | "carga-parcial" })}>
-							<SelectTrigger className='w-full text-left'>
+							<SelectTrigger className='w-full rounded-md bg-background/70 backdrop-blur-sm border-muted focus:ring-1 focus:ring-primary/40 text-left'>
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent className='rounded-md backdrop-blur-sm'>
 								{Object.entries(modalidades).map(([key, info]) => (
-									<SelectItem key={key} value={key}>
-										<div className='text-left'>
+									<SelectItem key={key} value={key} className='text-sm data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary'>
+										<div>
 											<span className='font-medium'>{info.nome}</span>
-											<p className='text-xs text-muted-foreground text-left'>{info.descricao}</p>
+											<p className='text-xs text-muted-foreground'>{info.descricao}</p>
 										</div>
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
-						<div className='text-sm text-muted-foreground text-left'>{modalidadeAtual.descricao}</div>
+						<div className='text-xs text-muted-foreground'>{modalidadeAtual.descricao}</div>
 					</div>
 
 					{/* Preview da Configuração Atual */}
-					<div className='bg-muted/50 p-4 rounded-lg space-y-2 text-left'>
-						<h4 className='font-medium text-sm text-left'>Configuração Atual:</h4>
-						<div className='flex flex-wrap gap-2 text-left'>
-							<Badge variant='outline' className='bg-primary/10 text-primary border-primary/30'>
+					<div className='p-4 rounded-xl border border-muted/40 bg-muted/20 backdrop-blur-sm space-y-2'>
+						<h4 className='font-medium text-xs uppercase tracking-wide text-muted-foreground'>Resumo Atual</h4>
+						<div className='flex flex-wrap gap-2'>
+							<Badge variant='outline' className='bg-primary/10 text-primary border-primary/30 rounded-md'>
 								Resolução ANTT 5.867/2020
 							</Badge>
-							<Badge variant='outline' className='bg-secondary/50 text-secondary-foreground border-secondary/60'>
+							<Badge variant='outline' className='bg-secondary/50 text-secondary-foreground border-secondary/40 rounded-md'>
 								{tabelaAtual.nome} ({tabelaAtual.badge})
 							</Badge>
-							<Badge variant='outline' className='bg-accent/50 text-accent-foreground border-accent/60'>
+							<Badge variant='outline' className='bg-accent/40 text-accent-foreground border-accent/40 rounded-md'>
 								{cargaAtual.nome}
 							</Badge>
-							<Badge variant='outline' className='bg-muted text-muted-foreground border-muted-foreground/30'>
+							<Badge variant='outline' className='bg-muted text-muted-foreground border-muted-foreground/20 rounded-md'>
 								{modalidadeAtual.nome}
 							</Badge>
 						</div>
 					</div>
 				</div>
 
-				<DialogFooter className='gap-2'>
-					<Button variant='outline' onClick={handleReset}>
+				<DialogFooter className='gap-2 pt-2'>
+					<Button variant='outline' onClick={handleReset} className='rounded-md'>
 						<RotateCcw className='h-4 w-4 mr-2' />
 						Restaurar Padrão
 					</Button>
-					<Button onClick={handleSave}>
+					<Button onClick={handleSave} className='rounded-md'>
 						<Save className='h-4 w-4 mr-2' />
 						Salvar Configurações
 					</Button>
