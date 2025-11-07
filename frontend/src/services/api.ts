@@ -1,6 +1,10 @@
 import type { ViaCEPResponse } from "@/types";
 
-const API_BASE = "http://localhost:3000";
+// Base da API: vem de variável de ambiente em build (VITE_API_BASE_URL) ou fallback para same-origin
+// Em desenvolvimento local, se VITE_API_BASE_URL não estiver definida, tenta localhost:3000.
+const API_BASE =
+	import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
+	(typeof window !== "undefined" && window.location.origin !== "http://localhost:5173" ? window.location.origin : "http://localhost:3000");
 
 export class ApiError extends Error {
 	constructor(message: string, public status?: number) {

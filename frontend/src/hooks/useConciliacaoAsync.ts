@@ -51,7 +51,12 @@ interface AsyncConciliacaoResult {
 	};
 }
 
-const API_BASE_URL = "http://localhost:3000/api";
+// Base dinâmica para API (conciliacao). Usa VITE_API_BASE_URL se definida, caso contrário fallback:
+// - se estiver em produção e origin não é localhost:5173, usa same-origin
+// - senão usa http://localhost:3000
+const API_BASE_URL =
+	(import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
+		(typeof window !== "undefined" && window.location.origin !== "http://localhost:5173" ? window.location.origin : "http://localhost:3000")) + "/api";
 
 export function useConciliacaoAsync() {
 	// Estados
