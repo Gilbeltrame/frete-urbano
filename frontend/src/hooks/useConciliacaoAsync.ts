@@ -4,6 +4,7 @@
 import type { ConciliacaoResult } from "@/types";
 import type { LogEntry, LogLevel } from "@/utils/logger";
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import { useUsageLimits } from "./useUsageLimits";
 
 // Tipos
@@ -514,7 +515,7 @@ export function useConciliacaoAsync() {
 		addLog("info", "Dados limpos", "CLEAR");
 	}, [addLog]);
 
-	// Exportar resultados
+	// Exportar resultados como XLSX
 	const exportarResultados = useCallback(
 		(dados?: ConciliacaoResult[]) => {
 			const dadosParaExportar = dados || resultadoConciliacao;
@@ -525,19 +526,78 @@ export function useConciliacaoAsync() {
 			}
 
 			try {
-				addLog("info", "Exportando resultados", "EXPORT");
+				addLog("info", `Exportando ${dadosParaExportar.length} resultados para Excel`, "EXPORT");
 
-				const dataStr = JSON.stringify(dadosParaExportar, null, 2);
-				const dataBlob = new Blob([dataStr], { type: "application/json" });
+				// Preparar dados para o Excel (formato tabular)
+				const excelData = dadosParaExportar.map((item: any) => ({
+					Status: item.status || "-",
+					Filial: item.filial || "-",
+					Origem: `${item.cidade_origem || ""}-${item.uf_origem || ""}`,
+					Destino: `${item.cidade_destino || ""}-${item.uf_destino || ""}`,
+					"Distância (km)": item.distancia_km ? Number(item.distancia_km).toFixed(2) : "-",
+					"Tipo Veículo": item.tipo_veiculo || "-",
+					"Qt. Eixos": item.eixos || "-",
+					"Tipo Carga": item.tipo_carga || "-",
+					"Peso Bruto (kg)": item.peso_bruto ? Number(item.peso_bruto).toFixed(2) : "-",
+					"Frete Cobrado": item.valor_frete_cobrado ? `R$ ${Number(item.valor_frete_cobrado).toFixed(2)}` : "-",
+					"Frete Mín. ANTT": item.valor_total ? `R$ ${Number(item.valor_total).toFixed(2)}` : "-",
+					Diferença: item.diferenca_valor ? `R$ ${Number(item.diferenca_valor).toFixed(2)}` : "-",
+					"Diferença %": item.diferenca_percentual ? `${Number(item.diferenca_percentual).toFixed(1)}%` : "-",
+					"Motivo Status": item.motivo_status || "-",
+					CCD: item.CCD ? `R$ ${Number(item.CCD).toFixed(4)}` : "-",
+					CC: item.CC ? `R$ ${Number(item.CC).toFixed(2)}` : "-",
+					"Método Cálculo": item.metodo_calculo || "-",
+					Lote: item.lote_raw || "-",
+					Placa: item.placa_raw || "-",
+					Transportadora: item.transportadora_raw || "-",
+					"Data Emissão": item.data_emissao || "-",
+					Observações: Array.isArray(item.observacoes) ? item.observacoes.join("; ") : item.observacoes || "-",
+				}));
+
+				// Criar workbook
+				const ws = XLSX.utils.json_to_sheet(excelData);
+				const wb = XLSX.utils.book_new();
+				XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+
+				// Ajustar largura das colunas
+				const colWidths = [
+					{ wch: 15 }, // Status
+					{ wch: 20 }, // Filial
+					{ wch: 25 }, // Origem
+					{ wch: 25 }, // Destino
+					{ wch: 12 }, // Distância
+					{ wch: 15 }, // Tipo Veículo
+					{ wch: 10 }, // Qt. Eixos
+					{ wch: 15 }, // Tipo Carga
+					{ wch: 12 }, // Peso Bruto
+					{ wch: 15 }, // Frete Cobrado
+					{ wch: 15 }, // Frete Mín. ANTT
+					{ wch: 12 }, // Diferença
+					{ wch: 12 }, // Diferença %
+					{ wch: 25 }, // Motivo Status
+					{ wch: 12 }, // CCD
+					{ wch: 12 }, // CC
+					{ wch: 15 }, // Método Cálculo
+					{ wch: 12 }, // Lote
+					{ wch: 12 }, // Placa
+					{ wch: 30 }, // Transportadora
+					{ wch: 12 }, // Data Emissão
+					{ wch: 50 }, // Observações
+				];
+				ws["!cols"] = colWidths;
+
+				// Gerar arquivo
+				const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+				const dataBlob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 				const url = URL.createObjectURL(dataBlob);
 
 				const link = document.createElement("a");
 				link.href = url;
-				link.download = `conciliacao_async_${currentJobId || "unknown"}_${new Date().toISOString().slice(0, 10)}.json`;
+				link.download = `conciliacao_${currentJobId || "resultado"}_${new Date().toISOString().slice(0, 10)}.xlsx`;
 				link.click();
 
 				URL.revokeObjectURL(url);
-				addLog("info", "Resultados exportados", "EXPORT");
+				addLog("info", `${dadosParaExportar.length} resultados exportados para Excel`, "EXPORT");
 			} catch (error) {
 				addLog("error", `Erro na exportação: ${error.message}`, "EXPORT");
 			}
