@@ -260,6 +260,10 @@ if (!isMainThread) {
             if (routeTime > 8000) {
               console.log(`🐢 [LINHA ${i + 1}] Rota lenta ${routeTime}ms (${cidadeOrigem}→${cidadeDestino})`);
             }
+            
+            // Log detalhado da distância calculada
+            console.log(`📍 [DISTANCIA] Linha ${i + 2}: ${cidadeOrigem}-${ufOrigem} → ${cidadeDestino}-${ufDestino} = ${routeResult.km.toFixed(1)}km (método: ${routeResult.method})`);
+            
             const tipoCarga = mapearTipoCarga(tipoVeiculo, peso);
             const dados = {
               cidade_origem: cidadeOrigem,
@@ -279,6 +283,9 @@ if (!isMainThread) {
               destino_label: routeResult.destino
             };
             const freteCalculado = calcularFrete(dados);
+            
+            // Log detalhado do cálculo do frete
+            console.log(`💰 [CALCULO] Linha ${i + 2}: (${routeResult.km.toFixed(1)}km × R$${freteCalculado.CCD}) + R$${freteCalculado.CC} = R$${freteCalculado.valor_total.toFixed(2)} | Eixos: ${freteCalculado.eixos} | Tipo: ${freteCalculado.tipo_carga}`);
             // Incluir data_emissao no objeto retornado para uso posterior
             return { linha: i + 2, ...dados, lote_raw: loteRaw, placa_raw: placaRaw, transportadora_raw: transportadoraRaw, ...freteCalculado, data_emissao: dataEmissaoValor, valor_frete_cobrado: valorFreteCobrado, status: 'sucesso' };
           } catch (error) {
@@ -307,30 +314,59 @@ if (!isMainThread) {
           const diferençaValor = valorFreteCobradoReal - result.valor_total;
           const diferençaPercentual = ((diferençaValor / result.valor_total) * 100);
           
-          // Determinar status de conformidade (agora com motivoStatus granular)
+          // Log da comparação
+          console.log(`📊 [COMPARACAO] Linha ${result.linha}: Cobrado R$${valorFreteCobradoReal.toFixed(2)} vs Mínimo ANTT R$${result.valor_total.toFixed(2)} | Diferença: ${diferençaPercentual > 0 ? '+' : ''}${diferençaPercentual.toFixed(1)}% ${isSimulado ? '(SIMULADO)' : '(REAL)'}`);
+          
+          // Determinar status de conformidade (critérios mais flexíveis e precisos)
           let status;
           let observacoes = [];
           let motivoStatus;
 
-          if (valorFreteCobradoReal < result.valor_total) {
+          // Verificar se é frete urbano (mesma cidade)
+          const isFreteUrbano = result.cidade_origem === result.cidade_destino && result.uf_origem === result.uf_destino;
+          
+          if (isFreteUrbano) {
+            observacoes.push('FRETE URBANO: Mínimo ANTT pode não se aplicar - tarifa urbana pode ser superior');
+          }
+
+          // Análise de conformidade com critérios ajustados
+          if (valorFreteCobradoReal < result.valor_total * 0.90) {
+            // Mais de 10% abaixo do mínimo
             status = 'ERRO_CALCULO';
             motivoStatus = 'ABAIXO_PISO';
-            observacoes.push('ALERTA: Frete cobrado está ABAIXO do piso mínimo ANTT - situação irregular');
-          } else if (Math.abs(diferençaPercentual) <= 5) {
+            observacoes.push('IRREGULAR: Frete está mais de 10% abaixo do piso mínimo ANTT');
+          } else if (valorFreteCobradoReal < result.valor_total) {
+            // Até 10% abaixo do mínimo
+            status = 'ATENCAO';
+            motivoStatus = 'LEVEMENTE_ABAIXO';
+            observacoes.push('ATENÇÃO: Frete levemente abaixo do mínimo ANTT (até 10%)');
+          } else if (valorFreteCobradoReal <= result.valor_total * 1.10) {
+            // 0% a 10% acima do mínimo
             status = 'CONFORME';
             motivoStatus = 'DENTRO_TOLERANCIA';
-          } else if (Math.abs(diferençaPercentual) <= 15) {
+            observacoes.push('Frete está dentro da faixa adequada (até 10% acima do mínimo)');
+          } else if (valorFreteCobradoReal <= result.valor_total * 1.30) {
+            // 10% a 30% acima do mínimo
             status = 'DIVERGENTE';
             motivoStatus = 'VARIACAO_MEDIA';
-            observacoes.push('Variação moderada em relação ao mínimo - recomenda-se revisão');
-          } else {
-            status = 'ERRO_CALCULO';
-            if (diferençaPercentual > 0) {
-              motivoStatus = 'SOBREPRECO';
-              observacoes.push('Frete cobrado muito acima do mínimo ANTT - possível sobrepreço');
+            observacoes.push('Variação de 10% a 30% acima do mínimo - verificar negociação comercial');
+          } else if (valorFreteCobradoReal <= result.valor_total * 2.0) {
+            // 30% a 100% acima do mínimo
+            status = 'ATENCAO';
+            motivoStatus = 'SOBREPRECO';
+            if (isFreteUrbano) {
+              observacoes.push('Frete 30-100% acima do mínimo - pode ser justificável para frete urbano');
             } else {
-              motivoStatus = 'VARIACAO_EXCESSIVA_NEGATIVA';
-              observacoes.push('Diferença negativa elevada - verificar parâmetros (peso, eixos, rota)');
+              observacoes.push('ATENÇÃO: Frete 30-100% acima do mínimo ANTT - verificar justificativa');
+            }
+          } else {
+            // Mais de 100% acima do mínimo
+            status = 'ATENCAO';
+            motivoStatus = 'VARIACAO_EXCESSIVA_POSITIVA';
+            if (isFreteUrbano) {
+              observacoes.push('Frete muito acima do mínimo - típico de frete urbano ou carga especial');
+            } else {
+              observacoes.push('ATENÇÃO: Frete está mais de 100% acima do mínimo - verificar se é carga especial');
             }
           }
 
