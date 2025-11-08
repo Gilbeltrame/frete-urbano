@@ -38,6 +38,7 @@ export const ResultadosFiltroPanel: React.FC<Props> = ({ termoPesquisa, onPesqui
 						<SelectItem value='TODOS'>Todos os Status</SelectItem>
 						<SelectItem value='CONFORME'>Conforme ANTT</SelectItem>
 						<SelectItem value='DIVERGENTE'>Necessita Revisão</SelectItem>
+						<SelectItem value='ATENCAO'>Atenção</SelectItem>
 						<SelectItem value='ERRO_CALCULO'>Não Conforme</SelectItem>
 					</SelectContent>
 				</Select>

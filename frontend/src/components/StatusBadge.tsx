@@ -28,6 +28,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 			</span>
 		);
 	}
+	if (status === "ATENCAO") {
+		return (
+			<span className={cn(base, "bg-orange-50/70 border-orange-200 text-orange-700 shadow-sm")}>
+				<AlertTriangle className='w-3.5 h-3.5 text-orange-500' />
+				<span className='leading-none'>Atenção</span>
+			</span>
+		);
+	}
 	if (status === "ERRO_CALCULO") {
 		return (
 			<span className={cn(base, "bg-red-50/70 border-red-200 text-red-700 shadow-sm")}>

@@ -63,6 +63,8 @@
 	--status-conforme-bg: #dcfce7;
 	--status-divergente: #ca8a04;
 	--status-divergente-bg: #fef9c3;
+	--status-atencao: #ea580c;
+	--status-atencao-bg: #ffedd5;
 	--status-erro: #dc2626;
 	--status-erro-bg: #fee2e2;
 }
@@ -127,6 +129,8 @@
 	--status-conforme-bg: #14532d;
 	--status-divergente: #d8a324;
 	--status-divergente-bg: #3f2e07;
+	--status-atencao: #f97316;
+	--status-atencao-bg: #431407;
 	--status-erro: #ef4444;
 	--status-erro-bg: #4c0d0d;
 }

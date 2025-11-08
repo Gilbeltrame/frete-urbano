@@ -17,6 +17,7 @@ interface StatusChartProps {
 const STATUS_COLORS: Record<StatusConciliacao, { bgVar: string; fgVar: string; text: string; label: string }> = {
 	CONFORME: { bgVar: "var(--status-conforme-bg)", fgVar: "var(--status-conforme)", text: "Conforme ANTT", label: "Conforme" },
 	DIVERGENTE: { bgVar: "var(--status-divergente-bg)", fgVar: "var(--status-divergente)", text: "Necessita Revisão", label: "Revisão" },
+	ATENCAO: { bgVar: "var(--status-atencao-bg)", fgVar: "var(--status-atencao)", text: "Atenção", label: "Atenção" },
 	ERRO_CALCULO: { bgVar: "var(--status-erro-bg)", fgVar: "var(--status-erro)", text: "Não Conforme", label: "Não Conforme" },
 };
 
@@ -32,7 +33,7 @@ export function StatusChart({ resultados, filtrados, className }: StatusChartPro
 	const base = modo === "filtrado" && filtrados ? filtrados : resultados;
 
 	const counts = useMemo(() => {
-		const acc: Record<StatusConciliacao, number> = { CONFORME: 0, DIVERGENTE: 0, ERRO_CALCULO: 0 };
+		const acc: Record<StatusConciliacao, number> = { CONFORME: 0, DIVERGENTE: 0, ATENCAO: 0, ERRO_CALCULO: 0 };
 		for (const r of base) if (acc[r.status] !== undefined) acc[r.status]++;
 		return acc;
 	}, [base]);

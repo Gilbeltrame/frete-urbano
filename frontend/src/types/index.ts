@@ -117,7 +117,7 @@ export interface ConciliacaoResult {
 	};
 }
 
-export type StatusConciliacao = "CONFORME" | "DIVERGENTE" | "ERRO_CALCULO";
+export type StatusConciliacao = "CONFORME" | "DIVERGENTE" | "ERRO_CALCULO" | "ATENCAO";
 
 export interface FreteFormData {
 	modo: ModoDistancia;
