@@ -9,6 +9,53 @@ import { calculateCityDistance } from './routeService.mjs';
 // Constantes de limitação
 const LIMITE_LINHAS_PLANILHA = 10;
 
+// Função auxiliar para parse de valores monetários brasileiros
+function parseValorBrasileiro(valor) {
+  if (!valor) return null;
+  
+  let valorStr = valor.toString().trim();
+  
+  // Remover símbolo R$, espaços, etc
+  valorStr = valorStr.replace(/R\$\s*/g, '');
+  
+  // Se já é um número, retornar direto
+  if (typeof valor === 'number') return valor;
+  
+  // Detectar formato brasileiro (1.234,56) vs americano (1,234.56)
+  const temVirgula = valorStr.includes(',');
+  const temPonto = valorStr.includes('.');
+  
+  if (temVirgula && temPonto) {
+    // Formato brasileiro: 1.234,56 ou 12.345,67
+    // O último separador é vírgula
+    const ultimaVirgula = valorStr.lastIndexOf(',');
+    const ultimoPonto = valorStr.lastIndexOf('.');
+    
+    if (ultimaVirgula > ultimoPonto) {
+      // Formato brasileiro: remover pontos, trocar vírgula por ponto
+      valorStr = valorStr.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Formato americano: remover vírgulas
+      valorStr = valorStr.replace(/,/g, '');
+    }
+  } else if (temVirgula) {
+    // Só vírgula: pode ser 1234,56 (BR) ou 1,234 (US com milhares)
+    // Assumir BR se vírgula está próxima do fim (2 ou 3 dígitos depois)
+    const partes = valorStr.split(',');
+    if (partes.length === 2 && partes[1].length <= 2) {
+      // Formato BR: 1234,56
+      valorStr = valorStr.replace(',', '.');
+    } else {
+      // Formato US: remover vírgulas
+      valorStr = valorStr.replace(/,/g, '');
+    }
+  }
+  // Se só tem ponto, assumir formato US ou já correto
+  
+  const numero = parseFloat(valorStr);
+  return isNaN(numero) ? null : numero;
+}
+
 // Se este arquivo está sendo executado como worker
 if (!isMainThread) {
   const { filePath, options = {} } = workerData;
@@ -135,13 +182,28 @@ if (!isMainThread) {
     const transportadoraIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('transportadora'));
     columnMapping.transportadora = transportadoraIndex;
 
-    // Buscar coluna valor de frete (nova)
-    const valorFreteIndex = headers.findIndex(h => 
-      h && (h.toString().toLowerCase().includes('valor frete') || 
-            h.toString().toLowerCase().includes('valor do frete') ||
-            h.toString().toLowerCase().includes('frete'))
-    );
+    // Buscar coluna valor de frete (IMPORTANTE: precisa ser específico para não pegar "Frete Mín. ANTT")
+    const valorFreteIndex = headers.findIndex(h => {
+      if (!h) return false;
+      const hLower = h.toString().toLowerCase();
+      // Prioridade: colunas específicas de frete cobrado
+      return (
+        hLower.includes('frete cobrado') ||
+        hLower.includes('valor frete') ||
+        hLower.includes('valor do frete') ||
+        (hLower.includes('frete') && !hLower.includes('mín') && !hLower.includes('min') && !hLower.includes('antt'))
+      );
+    });
     columnMapping.valor_frete = valorFreteIndex;
+    
+    // Log de mapeamento de colunas para debug
+    console.log(`📋 [MAPEAMENTO COLUNAS]`);
+    console.log(`   Filial Nome: índice ${columnMapping.filial_nome} (${columnMapping.filial_nome >= 0 ? headers[columnMapping.filial_nome] : 'NÃO ENCONTRADA'})`);
+    console.log(`   Cidade Destino: índice ${columnMapping.cidade_destino} (${headers[columnMapping.cidade_destino]})`);
+    console.log(`   Qt Eixos: índice ${columnMapping.eixos} (${headers[columnMapping.eixos]})`);
+    console.log(`   Valor Frete: índice ${columnMapping.valor_frete} (${columnMapping.valor_frete >= 0 ? headers[columnMapping.valor_frete] : 'NÃO ENCONTRADA - SERÁ SIMULADO'})`);
+    console.log(`   Peso: índice ${columnMapping.peso} (${columnMapping.peso >= 0 ? headers[columnMapping.peso] : 'NÃO ENCONTRADA'})`);
+    console.log(`   Tipo Veículo: índice ${columnMapping.tipo_veiculo} (${columnMapping.tipo_veiculo >= 0 ? headers[columnMapping.tipo_veiculo] : 'NÃO ENCONTRADA'})`);
 
     // Buscar coluna Data Emissão (flexível em acentuação / abreviação)
     function normalizar(str) {
@@ -210,10 +272,17 @@ if (!isMainThread) {
             const qtEixos = parseInt(row[columnMapping.eixos]) || 2;
             const tipoVeiculo = columnMapping.tipo_veiculo >= 0 ? row[columnMapping.tipo_veiculo]?.toString().trim() : '';
             const peso = columnMapping.peso >= 0 ? parseFloat(row[columnMapping.peso]?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
+            
+            // Extração do valor do frete usando função inteligente de parse
             let valorFreteCobrado = null;
             if (columnMapping.valor_frete >= 0) {
-              const valorStr = row[columnMapping.valor_frete]?.toString().replace(/[^\d.,]/g, '').replace(',', '.');
-              valorFreteCobrado = parseFloat(valorStr) || null;
+              const valorRaw = row[columnMapping.valor_frete];
+              valorFreteCobrado = parseValorBrasileiro(valorRaw);
+              
+              // Log para debug: mostrar valor original vs processado (primeiras 5 linhas)
+              if (i < 5) {
+                console.log(`💰 [FRETE RAW] Linha ${i + 2}: Original="${valorRaw}" → Parseado=R$ ${valorFreteCobrado?.toFixed(2) || 'NULL'}`);
+              }
             }
             // Dados fiéis da planilha para lote, placa e transportadora
             const loteRaw = columnMapping.lote >= 0 ? row[columnMapping.lote]?.toString().trim() : '';
