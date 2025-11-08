@@ -529,30 +529,43 @@ export function useConciliacaoAsync() {
 				addLog("info", `Exportando ${dadosParaExportar.length} resultados para Excel`, "EXPORT");
 
 				// Preparar dados para o Excel (formato tabular)
-				const excelData = dadosParaExportar.map((item: any) => ({
-					Status: item.status || "-",
-					Filial: item.filial || "-",
-					Origem: `${item.cidade_origem || ""}-${item.uf_origem || ""}`,
-					Destino: `${item.cidade_destino || ""}-${item.uf_destino || ""}`,
-					"Distância (km)": item.distancia_km ? Number(item.distancia_km).toFixed(2) : "-",
-					"Tipo Veículo": item.tipo_veiculo || "-",
-					"Qt. Eixos": item.eixos || "-",
-					"Tipo Carga": item.tipo_carga || "-",
-					"Peso Bruto (kg)": item.peso_bruto ? Number(item.peso_bruto).toFixed(2) : "-",
-					"Frete Cobrado": item.valor_frete_cobrado ? `R$ ${Number(item.valor_frete_cobrado).toFixed(2)}` : "-",
-					"Frete Mín. ANTT": item.valor_total ? `R$ ${Number(item.valor_total).toFixed(2)}` : "-",
-					Diferença: item.diferenca_valor ? `R$ ${Number(item.diferenca_valor).toFixed(2)}` : "-",
-					"Diferença %": item.diferenca_percentual ? `${Number(item.diferenca_percentual).toFixed(1)}%` : "-",
-					"Motivo Status": item.motivo_status || "-",
-					CCD: item.CCD ? `R$ ${Number(item.CCD).toFixed(4)}` : "-",
-					CC: item.CC ? `R$ ${Number(item.CC).toFixed(2)}` : "-",
-					"Método Cálculo": item.metodo_calculo || "-",
-					Lote: item.lote_raw || "-",
-					Placa: item.placa_raw || "-",
-					Transportadora: item.transportadora_raw || "-",
-					"Data Emissão": item.data_emissao || "-",
-					Observações: Array.isArray(item.observacoes) ? item.observacoes.join("; ") : item.observacoes || "-",
-				}));
+				const excelData = dadosParaExportar.map((resultado: any) => {
+					// Os dados podem estar em formatos diferentes (item/detalhes ou flat)
+					const item = resultado.item || resultado;
+					const detalhes = resultado.detalhes || resultado;
+
+					return {
+						Status: resultado.status || "-",
+						"Motivo Status": resultado.motivoStatus || resultado.motivo_status || "-",
+						Filial: item.filialNome || item.filial || "-",
+						"Data Emissão": item.dataEmissao || item.data_emissao || "-",
+						Lote: item.lote || item.lote_raw || "-",
+						Placa: item.placa || item.placa_raw || "-",
+						Transportadora: item.transportadora || item.transportadora_raw || "-",
+						Origem: `${item.cidadeOrigem || item.cidade_origem || ""}-${item.origemUF || item.uf_origem || ""}`,
+						Destino: `${item.cidadeDestino || item.cidade_destino || ""}-${item.destinoUF || item.uf_destino || ""}`,
+						"Distância (km)":
+							detalhes.distanciaKm || detalhes.distancia_km || item.distanciaKm ? Number(detalhes.distanciaKm || detalhes.distancia_km || item.distanciaKm).toFixed(2) : "-",
+						"Tipo Veículo": item.tpVeiculo || item.tipo_veiculo || "-",
+						"Qt. Eixos": detalhes.eixosUtilizados || item.qtEixos || item.eixos || "-",
+						"Tipo Carga": detalhes.tipoCaregaUtilizada || item.tipoCarga || item.tipo_carga || "-",
+						"Peso Bruto (kg)": item.pesoBruto || item.peso_bruto ? Number(item.pesoBruto || item.peso_bruto).toFixed(2) : "-",
+						"Peso Líquido (kg)": item.pesoLiqCalc || item.peso_liquido ? Number(item.pesoLiqCalc || item.peso_liquido).toFixed(2) : "-",
+						"Frete Cobrado":
+							item.valorFrete || item.valor_frete_cobrado || item.valor_frete ? `R$ ${Number(item.valorFrete || item.valor_frete_cobrado || item.valor_frete).toFixed(2)}` : "-",
+						"Frete Mín. ANTT": detalhes.valorMinimo || detalhes.valor_total ? `R$ ${Number(detalhes.valorMinimo || detalhes.valor_total).toFixed(2)}` : "-",
+						"Diferença (R$)": detalhes.diferençaValor || detalhes.diferenca_valor ? `R$ ${Number(detalhes.diferençaValor || detalhes.diferenca_valor).toFixed(2)}` : "-",
+						"Diferença (%)":
+							detalhes.diferençaPercentual || detalhes.diferenca_percentual ? `${Number(detalhes.diferençaPercentual || detalhes.diferenca_percentual).toFixed(1)}%` : "-",
+						"CCD (R$/km)": detalhes.CCD ? `R$ ${Number(detalhes.CCD).toFixed(4)}` : "-",
+						"CC (R$)": detalhes.CC ? `R$ ${Number(detalhes.CC).toFixed(2)}` : "-",
+						"Método Cálculo": detalhes.metodoCalculo || detalhes.metodo_calculo || "-",
+						"Tipo Frota": item.tpFrota || item.tipo_frota || "-",
+						"Tabela Frete": item.tabelaFrete || item.tabela_frete || "-",
+						CFOP: item.cfop || "-",
+						Observações: Array.isArray(resultado.observacoes) ? resultado.observacoes.join("; ") : resultado.observacoes || "-",
+					};
+				});
 
 				// Criar workbook
 				const ws = XLSX.utils.json_to_sheet(excelData);
@@ -562,7 +575,12 @@ export function useConciliacaoAsync() {
 				// Ajustar largura das colunas
 				const colWidths = [
 					{ wch: 15 }, // Status
+					{ wch: 25 }, // Motivo Status
 					{ wch: 20 }, // Filial
+					{ wch: 12 }, // Data Emissão
+					{ wch: 12 }, // Lote
+					{ wch: 12 }, // Placa
+					{ wch: 30 }, // Transportadora
 					{ wch: 25 }, // Origem
 					{ wch: 25 }, // Destino
 					{ wch: 12 }, // Distância
@@ -570,18 +588,17 @@ export function useConciliacaoAsync() {
 					{ wch: 10 }, // Qt. Eixos
 					{ wch: 15 }, // Tipo Carga
 					{ wch: 12 }, // Peso Bruto
+					{ wch: 12 }, // Peso Líquido
 					{ wch: 15 }, // Frete Cobrado
 					{ wch: 15 }, // Frete Mín. ANTT
-					{ wch: 12 }, // Diferença
-					{ wch: 12 }, // Diferença %
-					{ wch: 25 }, // Motivo Status
+					{ wch: 12 }, // Diferença (R$)
+					{ wch: 12 }, // Diferença (%)
 					{ wch: 12 }, // CCD
 					{ wch: 12 }, // CC
 					{ wch: 15 }, // Método Cálculo
-					{ wch: 12 }, // Lote
-					{ wch: 12 }, // Placa
-					{ wch: 30 }, // Transportadora
-					{ wch: 12 }, // Data Emissão
+					{ wch: 12 }, // Tipo Frota
+					{ wch: 12 }, // Tabela Frete
+					{ wch: 8 }, // CFOP
 					{ wch: 50 }, // Observações
 				];
 				ws["!cols"] = colWidths;
