@@ -1,6 +1,7 @@
 // conciliacaoWorker.mjs
 // Worker Node.js para processamento de conciliação em background
 
+import { fileURLToPath } from 'url';
 import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 import XLSX from 'xlsx';
 import { calculateCityDistance } from './routeService.mjs';
@@ -554,11 +555,10 @@ function calcularFrete({ distancia_km, eixos, tipo_carga, pedagio = 0, retorno_v
 
 // Exportar função para criar worker
 export function createConciliacaoWorker(filePath, options = {}) {
-  const workerPath = import.meta.url.startsWith('file://') 
-    ? import.meta.url.slice(8) // Remove 'file:///' no Windows
-    : new URL(import.meta.url).pathname;
+  // Usar fileURLToPath para converter import.meta.url em caminho do sistema
+  const __filename = fileURLToPath(import.meta.url);
     
-  return new Worker(workerPath, {
+  return new Worker(__filename, {
     workerData: { filePath, options }
   });
 }
